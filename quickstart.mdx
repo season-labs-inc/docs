@@ -1,0 +1,87 @@
+---
+title: "Quickstart"
+description: "From zero to cognitive context in under 5 minutes."
+---
+
+## Prerequisites
+
+- Node.js 18 or later
+- An Era API key and partner ID (contact [ayushman@season.team](mailto:ayushman@season.team))
+
+## Get started
+
+<Steps>
+  <Step title="Install the SDK">
+    ```bash
+    npm install @season/era-sdk
+    ```
+  </Step>
+
+  <Step title="Set your environment variables">
+    ```bash
+    ERA_API_KEY=your_api_key
+    ERA_URL=https://your-era-endpoint.com
+    ERA_PARTNER_ID=your_partner_id
+    ```
+
+    Or export them in your shell / `.env.local` file.
+  </Step>
+
+  <Step title="Initialize the client">
+    ```typescript
+    import { Era } from "@season/era-sdk";
+
+    const era = new Era({
+      apiKey: process.env.ERA_API_KEY!,
+      baseUrl: process.env.ERA_URL!,
+      partnerId: process.env.ERA_PARTNER_ID!,
+    });
+    ```
+
+    Pass `userId` and `sessionId` here if they are known at startup, or per-call inside `turnContext`.
+  </Step>
+
+  <Step title="Inject context before each LLM call">
+    ```typescript
+    // messages is the conversation history so far
+    const block = await era.turnContext(messages, {
+      userId: "user_abc",
+      sessionId: "session_xyz",
+    });
+
+    // Append to your system prompt
+    const systemPrompt = `You are a helpful assistant.\n\n${block}`;
+    ```
+
+    `block` is a plain string — append it however your framework expects. On the very first turn, or if the Era service is unreachable, it returns `""` safely.
+  </Step>
+</Steps>
+
+## What you get
+
+After the second turn, `block` looks like:
+
+```
+[STATE v1]
+user_id: user_abc
+lifecycle: exploring
+motivation: validator
+depth: moderate
+sentiment: positive
+intent_resolved_rate: 0.50
+top_intents: pricing, features
+[/STATE]
+```
+
+Your model sees this on every subsequent turn and personalizes its responses accordingly.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Async vs Sync modes" icon="arrows-left-right" href="/concepts/async-sync">
+    Pick the right latency/freshness tradeoff for your use case.
+  </Card>
+  <Card title="Vercel AI SDK integration" icon="puzzle-piece" href="/integrations/vercel-ai-sdk">
+    Auto-inject with `withEra` — no manual string appending.
+  </Card>
+</CardGroup>

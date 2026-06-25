@@ -1,0 +1,76 @@
+---
+title: "Session Management"
+description: "How Era identifies users and deduplicates requests within a session."
+---
+
+## User and session IDs
+
+Era scopes context blocks to a `(userId, sessionId)` pair. You can provide these in two places:
+
+**At construction time** — applied to every `turnContext` call unless overridden:
+
+```typescript
+const era = new Era({
+  apiKey: "...",
+  baseUrl: "...",
+  partnerId: "...",
+  userId: "user_abc",
+  sessionId: "session_xyz",
+});
+```
+
+**Per call** — overrides the constructor defaults for that specific call:
+
+```typescript
+const block = await era.turnContext(messages, {
+  userId: "user_abc",
+  sessionId: "session_xyz",
+});
+```
+
+## Automatic session ID generation
+
+If you do not provide a `sessionId`, Era generates one automatically from the text of the **first user message** using a SHA-256 hash. This means:
+
+- The same conversation always maps to the same session ID.
+- You don't need to manage session IDs if your conversation history is consistent.
+
+```typescript
+// No sessionId provided — Era derives it from messages[0].content
+const block = await era.turnContext(messages, { userId: "user_abc" });
+```
+
+<Note>
+  If `userId` is also not provided, Era uses a fallback. For production use, always pass a stable `userId` so context accumulates correctly across sessions.
+</Note>
+
+## Memoization
+
+Era memoizes results by `userId | sessionId | turn_index`. If you call `turnContext` multiple times with the same conversation state (e.g. because your framework retries or streams in steps), only one HTTP request is made.
+
+```typescript
+// First call — makes a request
+const block1 = await era.turnContext(messages, { userId, sessionId });
+
+// Same messages, same user/session — returns cached result instantly
+const block2 = await era.turnContext(messages, { userId, sessionId });
+
+// block1 === block2, only one fetch was made
+```
+
+This makes Era safe to use inside middleware that may be called multiple times per model invocation (e.g. Vercel AI SDK streaming steps).
+
+## Multi-user / multi-session agents
+
+For agents that handle multiple users in the same process, construct one shared `Era` instance and pass `userId` / `sessionId` per call:
+
+```typescript
+const era = new Era({ apiKey, baseUrl, partnerId });
+
+async function handleTurn(userId: string, sessionId: string, messages: Message[]) {
+  const block = await era.turnContext(messages, { userId, sessionId });
+  // ...
+}
+```
+
+The memoization cache is per `Era` instance, so each instance has its own isolated cache.

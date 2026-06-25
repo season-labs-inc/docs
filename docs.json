@@ -1,0 +1,79 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Era SDK",
+  "colors": {
+    "primary": "#6B5CE7",
+    "light": "#9B8AF5",
+    "dark": "#4C3DD4"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "pages": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Core Concepts",
+        "pages": [
+          "concepts/async-sync",
+          "concepts/fail-open",
+          "concepts/sessions"
+        ]
+      },
+      {
+        "group": "SDK Reference",
+        "pages": [
+          "sdk/era-class",
+          "sdk/types",
+          "sdk/helpers"
+        ]
+      },
+      {
+        "group": "Integrations",
+        "pages": [
+          "integrations/vercel-ai-sdk"
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/season-labs-inc/intent-scoring",
+          "icon": "github"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:ayushman@season.team"
+      }
+    ]
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "claude",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/season-labs-inc"
+    }
+  }
+}

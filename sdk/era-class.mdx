@@ -1,0 +1,121 @@
+---
+title: "Era Class"
+description: "Core client for fetching cognitive context blocks."
+---
+
+## Constructor
+
+```typescript
+import { Era } from "@season/era-sdk";
+
+const era = new Era(options: EraOptions);
+```
+
+See [`EraOptions`](/sdk/types#eraoptions) for the full options reference.
+
+**Throws** `Error` if `mode` is provided but is not `"async"` or `"sync"`.
+
+### Minimal example
+
+```typescript
+const era = new Era({
+  apiKey: process.env.ERA_API_KEY!,
+  baseUrl: process.env.ERA_URL!,
+  partnerId: "your_partner_id",
+});
+```
+
+### Full example
+
+```typescript
+const era = new Era({
+  apiKey: process.env.ERA_API_KEY!,
+  baseUrl: process.env.ERA_URL!,
+  partnerId: "your_partner_id",
+  userId: "user_abc",
+  sessionId: "session_xyz",
+  mode: "async",
+  brandVoice: "concise and direct",
+  timeoutMs: 2000,
+  maxRetries: 1,
+  debug: true,
+});
+```
+
+---
+
+## `turnContext(messages, options?)`
+
+Fetches the cognitive context block for the current turn and returns it as a string.
+
+```typescript
+async turnContext(
+  messages: EraMessage[],
+  options?: TurnContextOptions
+): Promise<string>
+```
+
+### Parameters
+
+<ParamField path="messages" type="EraMessage[]" required>
+  The full conversation history up to and including the current user message. Era uses this to compute the context block. See [`EraMessage`](/sdk/types#eramessage).
+</ParamField>
+
+<ParamField path="options.userId" type="string">
+  Overrides the `userId` set at construction. Scopes the context to this user.
+</ParamField>
+
+<ParamField path="options.sessionId" type="string">
+  Overrides the `sessionId` set at construction. If omitted and no constructor default exists, a session ID is derived from the first user message via SHA-256.
+</ParamField>
+
+### Returns
+
+`Promise<string>` — the cognitive context block to inject into your system prompt.
+
+Returns `""` (empty string) when:
+- The last message is not from the user
+- The Era service is unreachable or returns an error
+- The request times out after all retries
+
+**Never throws.** See [Fail-Open Design](/concepts/fail-open).
+
+### Usage
+
+```typescript
+const block = await era.turnContext(messages, {
+  userId: "user_abc",
+  sessionId: "session_xyz",
+});
+
+if (block) {
+  systemPrompt += "\n\n" + block;
+}
+```
+
+### Memoization
+
+Results are cached by `userId | sessionId | turn_index`. Calling `turnContext` multiple times with the same state makes only one HTTP request. See [Session Management](/concepts/sessions#memoization).
+
+---
+
+## Request format
+
+Under the hood, `turnContext` sends a `POST` to `{baseUrl}/v1/era/turn`:
+
+```json
+{
+  "partner_id": "your_partner_id",
+  "user_id": "user_abc",
+  "session_id": "session_xyz",
+  "mode": "async",
+  "brand_voice": "concise and direct",
+  "turns": [
+    { "role": "user", "turn_index": 0, "text": "Hello" },
+    { "role": "assistant", "turn_index": 1, "text": "Hi! How can I help?" },
+    { "role": "user", "turn_index": 2, "text": "What are your prices?" }
+  ]
+}
+```
+
+Authentication is via the `X-API-Key` header.

@@ -1,0 +1,75 @@
+---
+title: "Introduction"
+description: "Drop-in cognitive context for any conversational AI agent."
+---
+
+## What is Era?
+
+Era gives your AI agent memory of who the user is — their intent patterns, sentiment, history, and behavioral signals — without you having to build any of it. You call `turnContext()` once per turn and inject the returned block into your system prompt. That's it.
+
+The block is computed by the Era service from your conversation history and looks like this:
+
+```
+[STATE v1]
+user_id: u_abc123
+lifecycle: engaged
+motivation: validator
+depth: deep
+sentiment: positive
+intent_resolved_rate: 0.72
+top_intents: ticket purchase, price comparison
+[/STATE]
+```
+
+Your agent reads this context and responds accordingly — personalizing tone, anticipating follow-ups, and avoiding repeating ground already covered.
+
+## Key properties
+
+<CardGroup cols={2}>
+  <Card title="Zero dependencies" icon="feather">
+    Uses global `fetch`. No extra packages required.
+  </Card>
+  <Card title="Fail-open" icon="shield-check">
+    Any error returns an empty string — your agent never breaks.
+  </Card>
+  <Card title="Sub-millisecond in async mode" icon="bolt">
+    Stale-while-revalidate means no added latency on the critical path.
+  </Card>
+  <Card title="Works anywhere" icon="globe">
+    Plain class interface — no framework required. Vercel AI SDK wrapper included.
+  </Card>
+</CardGroup>
+
+## How it fits into your stack
+
+```
+User message
+     │
+     ▼
+era.turnContext(messages)   ←── Era service (non-blocking in async mode)
+     │
+     ▼
+Inject block into system prompt
+     │
+     ▼
+LLM call  →  Response to user
+```
+
+Era runs **before** your LLM call. In `async` mode (the default) it returns instantly with the previous turn's precomputed block, so there is zero added latency on the critical path.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install and make your first `turnContext` call in under 5 minutes.
+  </Card>
+  <Card title="Async vs Sync" icon="arrows-left-right" href="/concepts/async-sync">
+    Understand the two operating modes before going to production.
+  </Card>
+  <Card title="Era Class" icon="code" href="/sdk/era-class">
+    Full API reference for the Era class and all its options.
+  </Card>
+  <Card title="Vercel AI SDK" icon="puzzle-piece" href="/integrations/vercel-ai-sdk">
+    Auto-inject context with a one-line middleware wrapper.
+  </Card>
+</CardGroup>

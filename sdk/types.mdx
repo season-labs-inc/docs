@@ -1,0 +1,133 @@
+---
+title: "Types & Interfaces"
+description: "Full reference for all exported TypeScript types."
+---
+
+## EraOptions
+
+Configuration passed to the `Era` constructor.
+
+```typescript
+interface EraOptions {
+  apiKey: string;
+  baseUrl: string;
+  partnerId: string;
+  userId?: string;
+  sessionId?: string;
+  mode?: EraMode;
+  brandVoice?: string;
+  timeoutMs?: number;
+  maxRetries?: number;
+  logger?: EraLogger;
+  debug?: boolean;
+}
+```
+
+### Fields
+
+<ParamField path="apiKey" type="string" required>
+  Your Era API key. Sent as the `X-API-Key` request header.
+</ParamField>
+
+<ParamField path="baseUrl" type="string" required>
+  Base URL of the Era service, e.g. `https://era.season.team`. Trailing slashes are normalized automatically.
+</ParamField>
+
+<ParamField path="partnerId" type="string" required>
+  Your partner identifier. Scopes all context blocks to your account.
+</ParamField>
+
+<ParamField path="userId" type="string">
+  Default user ID for all `turnContext` calls. Can be overridden per call.
+</ParamField>
+
+<ParamField path="sessionId" type="string">
+  Default session ID for all `turnContext` calls. Can be overridden per call. If omitted, derived automatically from the first user message.
+</ParamField>
+
+<ParamField path="mode" type='"async" | "sync"' default='"async"'>
+  Operating mode. `async` returns instantly with the previous turn's block (zero latency). `sync` waits for the current turn's computation. See [Async vs Sync Modes](/concepts/async-sync).
+</ParamField>
+
+<ParamField path="brandVoice" type="string">
+  Optional brand voice hint forwarded to the Era service. Influences the tone of `[REC]` action blocks in the context output.
+</ParamField>
+
+<ParamField path="timeoutMs" type="number" default="2000 (async) / 30000 (sync)">
+  Per-request timeout in milliseconds. On timeout, returns `""` and logs a warning.
+</ParamField>
+
+<ParamField path="maxRetries" type="number" default="1">
+  Number of retries on transient failures (timeout, network error, 5xx). 4xx errors are never retried.
+</ParamField>
+
+<ParamField path="logger" type="EraLogger">
+  Custom logger. Defaults to `console.warn` for warnings and `console.log` for info (when `debug` is true).
+</ParamField>
+
+<ParamField path="debug" type="boolean" default="false">
+  When `true`, logs verbose per-turn output including the injected block and request details.
+</ParamField>
+
+---
+
+## EraMode
+
+```typescript
+type EraMode = "async" | "sync";
+```
+
+---
+
+## EraLogger
+
+Interface for providing a custom logger (e.g. pino, winston).
+
+```typescript
+interface EraLogger {
+  warn: (msg: string) => void;
+  info: (msg: string) => void;
+}
+```
+
+---
+
+## EraMessage
+
+A single message in a conversation history array. Matches the shape used by most AI SDKs (Vercel AI SDK, Anthropic SDK, OpenAI SDK).
+
+```typescript
+interface EraMessage {
+  role: string;
+  content: unknown;
+}
+```
+
+Era filters the array for `role: "user"` and `role: "assistant"` messages only. Content can be a plain string or a multimodal content array — Era extracts the text portions automatically.
+
+---
+
+## EraTurn
+
+The normalized turn format that Era sends to the service. You rarely need to use this directly; it is produced internally by [`messagesToTurns`](/sdk/helpers).
+
+```typescript
+interface EraTurn {
+  role: "user" | "assistant";
+  turn_index: number;
+  text: string;
+}
+```
+
+---
+
+## TurnContextOptions
+
+Options passed to `era.turnContext()` to override per-call user/session identifiers.
+
+```typescript
+interface TurnContextOptions {
+  userId?: string;
+  sessionId?: string;
+}
+```

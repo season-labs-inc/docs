@@ -1,0 +1,83 @@
+---
+title: "Async vs Sync Modes"
+description: "Choose the right latency/freshness tradeoff for your use case."
+---
+
+## Overview
+
+Era has two operating modes, controlled by the `mode` option when constructing the `Era` client.
+
+| Mode | Default timeout | Latency | Freshness |
+|------|----------------|---------|-----------|
+| `async` | 2 000 ms | ~0 ms (returns previous block) | Previous turn |
+| `sync` | 30 000 ms | Waits for processing | Current turn |
+
+## Async mode (default)
+
+```typescript
+const era = new Era({ ..., mode: "async" });
+```
+
+**Stale-while-revalidate.** When you call `turnContext` on turn N:
+
+1. The SDK immediately returns the block computed from turn N-1 (already precomputed in the background).
+2. In the background, it kicks off computation for turn N so it is ready before turn N+1.
+
+The result: **zero latency on the critical path.** Your LLM call is never held up by Era.
+
+```
+Turn 1: block = ""           (nothing precomputed yet — first turn)
+Turn 2: block = <turn 1 context>   (instant — already computed)
+Turn 3: block = <turn 2 context>   (instant)
+```
+
+<Note>
+  The very first turn always returns `""` in async mode because there is nothing precomputed yet. This is expected behavior.
+</Note>
+
+## Sync mode
+
+```typescript
+const era = new Era({ ..., mode: "sync" });
+```
+
+Waits for the Era service to finish processing the **current** turn before returning. The block reflects the conversation up to and including the message the user just sent.
+
+Use sync mode when:
+- **Freshness matters more than latency** — e.g. a batch pipeline, a background worker, or a non-real-time flow.
+- **You are running evals** and want deterministic, fully-computed context.
+- **Your first-turn experience requires context** — sync guarantees a non-empty block even on turn 1 (once the service processes it).
+
+<Warning>
+  Sync mode adds Era's processing time to your LLM call latency. For interactive chat, prefer async mode.
+</Warning>
+
+## Overriding the timeout
+
+Both modes accept a custom `timeoutMs`:
+
+```typescript
+const era = new Era({
+  mode: "async",
+  timeoutMs: 1000, // fail faster in async
+});
+
+const era = new Era({
+  mode: "sync",
+  timeoutMs: 60_000, // give sync more time for long conversations
+});
+```
+
+On timeout, Era [fails open](/concepts/fail-open) and returns `""`.
+
+## Choosing a mode
+
+```
+Is latency-sensitive (interactive chat)?
+  └─ Yes → async (default)
+  └─ No  → sync
+
+Does turn-1 context matter?
+  └─ Yes → sync
+  └─ No  → async
+```

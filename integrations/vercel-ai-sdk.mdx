@@ -1,0 +1,132 @@
+---
+title: "Vercel AI SDK"
+description: "Auto-inject cognitive context with a one-line model wrapper."
+---
+
+## Overview
+
+Import from `@season/era-sdk/ai-sdk` to get two helpers that integrate Era with the [Vercel AI SDK](https://sdk.vercel.ai):
+
+- **`withEra`** — wraps a model to automatically inject context on every call.
+- **`eraMiddleware`** — the underlying `LanguageModelMiddleware` if you need to compose it yourself.
+
+## Installation
+
+```bash
+npm install @season/era-sdk ai
+```
+
+The `ai` package (v5+) is a peer dependency and must be installed separately.
+
+---
+
+## `withEra`
+
+Wraps any Vercel AI SDK `LanguageModel` so that context is automatically fetched and injected into the system prompt before each model call.
+
+```typescript
+import { withEra } from "@season/era-sdk/ai-sdk";
+
+function withEra(
+  model: LanguageModel,
+  era: Era,
+  options?: TurnContextOptions
+): LanguageModel
+```
+
+### Usage
+
+```typescript
+import { anthropic } from "@ai-sdk/anthropic";
+import { Era } from "@season/era-sdk";
+import { withEra } from "@season/era-sdk/ai-sdk";
+import { streamText } from "ai";
+
+const era = new Era({
+  apiKey: process.env.ERA_API_KEY!,
+  baseUrl: process.env.ERA_URL!,
+  partnerId: "your_partner_id",
+});
+
+const model = withEra(
+  anthropic("claude-sonnet-4-6"),
+  era,
+  { userId: "user_abc", sessionId: "session_xyz" }
+);
+
+// Era context is injected automatically — no manual string appending
+const result = await streamText({
+  model,
+  messages,
+});
+```
+
+### How injection works
+
+On every model invocation, the middleware:
+
+1. Extracts `user` and `assistant` messages from the prompt.
+2. Calls `era.turnContext()` with those messages.
+3. Appends the returned block to the system message with `\n\n`, or creates a new system message if none exists.
+
+The modified prompt is then passed to the underlying model. Your application code never touches the block.
+
+### Dynamic user/session IDs
+
+Pass a per-request `userId` and `sessionId` via the `options` parameter of `withEra`. For truly dynamic IDs (e.g. resolved from a request context), use `eraMiddleware` directly and call `turnContext` yourself.
+
+---
+
+## `eraMiddleware`
+
+Returns a `LanguageModelMiddleware` (v3 spec) that you can compose with other middleware.
+
+```typescript
+import { eraMiddleware } from "@season/era-sdk/ai-sdk";
+
+function eraMiddleware(
+  era: Era,
+  options?: TurnContextOptions
+): LanguageModelMiddleware
+```
+
+### Usage with `wrapLanguageModel`
+
+```typescript
+import { wrapLanguageModel } from "ai";
+import { eraMiddleware } from "@season/era-sdk/ai-sdk";
+
+const model = wrapLanguageModel({
+  model: anthropic("claude-sonnet-4-6"),
+  middleware: eraMiddleware(era, { userId, sessionId }),
+});
+```
+
+### Composing multiple middleware
+
+```typescript
+import { wrapLanguageModel } from "ai";
+
+const model = wrapLanguageModel({
+  model: anthropic("claude-sonnet-4-6"),
+  middleware: [
+    loggingMiddleware(),
+    eraMiddleware(era, { userId, sessionId }),
+    rateLimitMiddleware(),
+  ],
+});
+```
+
+---
+
+## Notes
+
+**Retry safety.** The Vercel AI SDK may invoke `transformParams` multiple times per user turn (e.g. during streaming retries or multi-step tool calls). Era's memoization ensures only one HTTP request is made per unique `userId | sessionId | turn_index` combination regardless of how many times the middleware runs.
+
+**Works with any provider.** `withEra` wraps the `LanguageModel` interface, so it works with any Vercel AI SDK provider — Anthropic, OpenAI, Google, Mistral, etc.
+
+```typescript
+import { openai } from "@ai-sdk/openai";
+
+const model = withEra(openai("gpt-4o"), era, { userId, sessionId });
+```
