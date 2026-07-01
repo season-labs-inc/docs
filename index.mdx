@@ -1,44 +1,49 @@
 ---
 title: "Introduction"
-description: "Drop-in cognitive context for any conversational AI agent."
+description: "Era tells your agent why the user is here — live intent, urgency, and lifecycle state, injected into your prompt every turn."
 ---
 
 ## What is Era?
 
-Era gives your AI agent memory of who the user is — their intent patterns, sentiment, history, and behavioral signals — without you having to build any of it. You call `turnContext()` once per turn and inject the returned block into your system prompt. That's it.
+Era is not memory. Memory systems remember facts about a user — "has a dog named Rex." Era answers a different question: **why is this user here right now, what do they want, how urgent is it, and what should your agent do about it?**
 
-The block is computed by the Era service from your conversation history and looks like this:
+Every turn, Era reads the conversation and returns a typed context block — state, goal, values, intent, and a recommended action — that you inject into your system prompt. One call per turn:
 
 ```
-[STATE v1]
-user_id: u_abc123
-lifecycle: engaged
-motivation: validator
-depth: deep
-sentiment: positive
-intent_resolved_rate: 0.72
-top_intents: ticket purchase, price comparison
-[/STATE]
+[STATE v1] situation=duplicate_charge_on_card urgency=high knowledge=knows_refund_policy [/STATE]
+[GOAL v1] active=do:reverse the duplicate charge journey=[seek:find charge origin → do:reverse the duplicate charge] resolved=unresolved [/GOAL]
+[VALUE v1] top=[speed:high, trust:moderate] [/VALUE]
+[INTENT v1] intent=deciding(0.84) specificity=specific journey=[curious,validating,deciding] [/INTENT]
+[CAUSAL v1] trigger=statement_closes_tomorrow prior_attempt=contacted_bank_first emotion=frustrated need=fast resolution need_level=safety [/CAUSAL]
+[REC v1] action=validate channel=in_app timing=0 do="Confirm the duplicate and start the refund — skip re-verification." rationale="User has said 'quickly' twice; identity already verified turn 1." priority=1 [/REC]
 ```
 
-Your agent reads this context and responds accordingly — personalizing tone, anticipating follow-ups, and avoiding repeating ground already covered.
+Your agent reads this and stops behaving generically — it knows the user is frustrated, values speed over thoroughness, and needs escalation, before writing a single word.
+
+If you already run a memory layer (Mem0, Zep, or your own), keep it. Memory tells your agent what's true; Era tells it what's happening. The two blocks inject side by side.
 
 ## Key properties
 
 <CardGroup cols={2}>
-  <Card title="Zero dependencies" icon="feather">
-    Uses global `fetch`. No extra packages required.
-  </Card>
-  <Card title="Fail-open" icon="shield-check">
-    Any error returns an empty string — your agent never breaks.
+  <Card title="Universal schema" icon="diagram-project">
+    Typed state / goal / value / causal nodes — not a per-vertical intent taxonomy. The same block works for support, sales, and companion agents.
   </Card>
   <Card title="Sub-millisecond in async mode" icon="bolt">
     Stale-while-revalidate means no added latency on the critical path.
   </Card>
-  <Card title="Works anywhere" icon="globe">
-    Plain class interface — no framework required. Vercel AI SDK wrapper included.
+  <Card title="Fail-open" icon="shield-check">
+    Any error returns an empty string — your agent never breaks.
+  </Card>
+  <Card title="Zero dependencies" icon="feather">
+    Uses global `fetch`. No extra packages required. Works anywhere — plain class interface, Vercel AI SDK wrapper included.
   </Card>
 </CardGroup>
+
+## See it work
+
+<Card title="Before / After: F1 Academy fan companion" icon="wand-magic-sparkles" href="/use-cases/f1-academy">
+  The same conversation with and without Era — and the block that made the difference.
+</Card>
 
 ## How it fits into your stack
 

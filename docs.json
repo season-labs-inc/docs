@@ -18,6 +18,12 @@
         ]
       },
       {
+        "group": "Use Cases",
+        "pages": [
+          "use-cases/f1-academy"
+        ]
+      },
+      {
         "group": "Core Concepts",
         "pages": [
           "concepts/async-sync",
