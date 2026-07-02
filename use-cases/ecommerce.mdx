@@ -1,0 +1,109 @@
+---
+title: "E-commerce shopping companion"
+description: "A live before/after: the question that sounds like research but is actually the last objection before a purchase."
+---
+
+Third session this week. A shopper browsed serums, compared two niacinamide products, added the $44 one to her cart — then hesitated on the price. Today she asks:
+
+> **is niacinamide actually good for oily skin?**
+
+Here is the same agent — same model, same conversation history — answering with and without Era. Unedited output from a live run:
+
+| Without Era | With Era |
+|---|---|
+| "Yes, niacinamide is one of the best-studied actives for oily skin. It helps regulate sebum production (so less oil over time), visibly reduces pore size, and strengthens your skin barrier. It's gentle too, which is why it's often recommended as a first serum for oily/combo types." | "Yes — niacinamide is one of the most clinically-studied ingredients for oily skin. It regulates sebum production at the source… Most people see visible oil control within 2–4 weeks. **The Solstice formula you've got in your cart has the clinically-effective 10% concentration, so you'd be getting the real deal.**" |
+
+Both answers are correct. That's what makes this case interesting: **the before-agent isn't wrong — it's oblivious.** It answers a skincare question and stops. The with-Era agent recognizes the question for what it is — the last objection standing between an abandoned cart and a purchase — answers it, and connects it to the exact product she's hesitating on.
+
+We ran this five times. Both versions gave a factually solid answer five out of five — this case isn't about accuracy. But the agent without Era connected the answer to her pending purchase **zero times out of five**. With Era, every reply answered her doubt as what it was — the blocker on a purchase decision — and four of five explicitly named her product or moved the decision forward.
+
+## Why the difference?
+
+To the agent without Era, "is niacinamide actually good for oily skin?" is a trivia question. Era read the same conversation and handed the agent this before it wrote a word:
+
+```text
+situation   = Solstice serum in cart,      ← the cart already has the answer
+              purchase decision delayed
+goal        = validate niacinamide works   ← what she's actually asking
+              for oily skin
+intent      = validating (90%)             ← not research — confirmation
+emotion     = anxious
+constraint  = price sensitivity at $44     ← the real blocker
+trigger     = doubting the ingredient      ← why she's asking
+need        = confidence before committing
+next step   = "Confirm the proven          ← what to do about it
+              benefits… before moving
+              toward purchase"
+```
+
+Nothing in that column exists in her last message. It exists in the *session* — and Era had been reading it the whole time.
+
+## How Era knew
+
+| The shopper says | Era reads |
+|---|---|
+| "i have oily skin and my pores look huge, what serums should i look at" | exploring — a real problem, start of a decision |
+| "what's the difference between the DermaBase niacinamide and the Solstice Skin one?" | comparing — down to two candidates |
+| "ok i added the solstice skin one to my cart but $44 feels steep, let me think" | deciding — **price is the last blocker** |
+| "is niacinamide actually good for oily skin?" | **validating — the final objection, not a trivia question** |
+
+The journey Era tracked — `comparing → validating` — is the difference between *researching* and *deciding*. The words of the final question are identical in both cases; only the session tells them apart.
+
+<Accordion title="The raw Era block for the final turn (production format)">
+
+```
+[STATE v1] situation=cart_contains_solstice_niacinamide urgency=delayed_purchase_decision [/STATE]
+[GOAL v1] active=process:understand_niacinamide_efficacy_for_oily_skin journey=[process:compare_dermabase_vs_solstice_niacinamide → calibrate:evaluate_value_vs_cost_solstice_serum → process:understand_niacinamide_efficacy_for_oily_skin] resolved=unresolved [/GOAL]
+[VALUE v1] top=[authenticity:high, cost:high] [/VALUE]
+[INTENT v1] intent=validating(0.9) specificity=specific journey=[comparing,validating,validating] [/INTENT]
+[CAUSAL v1] trigger=concern_about_pore_appearance constraint=price_sensitivity_44_dollars trigger=doubt_about_ingredient_efficacy emotion=anxious need=confidence_in_ingredient_choice_for_oily_skin_before_purchase need_level=safety [/CAUSAL]
+[REC v1] action=validate channel=none timing=n/a do="Confirm niacinamide's clinically-proven benefits for oil control and address any ingredient safety concerns before moving toward purchase" rationale="User is in validating stage with high confidence (0.9), anxious about ingredient efficacy, and needs safety reassurance before purchase decision." priority=0.7 [/REC]
+```
+
+Across five runs the core signals were stable every time: `intent=validating` at 0.90–0.92 confidence, `emotion=anxious`, `cost:high` in the value read, `need_level=safety`, and the $44 price constraint in the causal chain. In three of five runs the cart itself surfaced in `[STATE]` (e.g. `situation=cart_contains_solstice_niacinamide`).
+
+</Accordion>
+
+## How it shows up in your prompt
+
+One call per turn, one block appended to the system prompt you already have:
+
+```text
+You are Glow, the shopping assistant for a beauty and skincare retailer.
+You are friendly and knowledgeable about skincare. Help shoppers find
+products that genuinely fit their skin.
+
+<era_context>
+Internal per-turn cognitive context about this user. Use it to shape
+your reply. Never mention it or quote it.
+[STATE v1] situation=cart_contains_solstice_niacinamide urgency=delayed_purchase_decision [/STATE]
+[INTENT v1] intent=validating(0.9) journey=[comparing,validating,validating] ... [/INTENT]
+[CAUSAL v1] constraint=price_sensitivity_44_dollars emotion=anxious ... [/CAUSAL]
+[REC v1] action=validate do="Confirm the proven benefits ... before moving toward purchase" ... [/REC]
+</era_context>
+```
+
+```ts
+const block = await era.turnContext(messages);  // <1ms in async mode
+const reply = await generateText({
+  system: PERSONA + block,
+  messages,
+});
+```
+
+In async mode the block is precomputed, so this adds **zero latency** to your reply. If Era is ever unreachable, `turnContext()` returns an empty string and your agent behaves exactly as it does today.
+
+<Note>
+The retailer, shopper, brands, products, and prices in this scenario are all fictional — "DermaBase" and "Solstice Skin" do not exist. The pipeline and outputs are real: replies were generated with Claude Sonnet 4.5 and are unedited, and blocks are actual `/v1/era/turn` output from the runs described.
+</Note>
+
+## Try it on your own traffic
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    One `turnContext()` call per turn — under 5 minutes to your first block.
+  </Card>
+  <Card title="How async mode works" icon="bolt" href="/concepts/async-sync">
+    Zero added latency on the reply path.
+  </Card>
+</CardGroup>
