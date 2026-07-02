@@ -1,0 +1,50 @@
+---
+title: "When to use Era"
+description: "Compare Era to how your agent handles context today, and see where it changes outcomes."
+---
+
+## How agents handle context today
+
+Most agents manage context the traditional way: put the conversation history in the prompt and let the model work it out. This carries you surprisingly far — and then quietly costs you in ways that are hard to see in any single reply:
+
+- The user's real question was set up three turns ago, but the model weighs the last message heaviest and answers just that.
+- "did I miss it??" reads identically whether it comes from a curious first-timer or an anxious regular — the words carry no history.
+- The reply is *correct* but generic. Generic replies end sessions, stall purchases, and mis-route urgent cases.
+
+Teams that hit this usually start hand-building a layer on top: an intent classifier here, sentiment tags there, session heuristics, prompt rules to stitch it together. That layer is real engineering, it's never done, and it's specific to their vertical.
+
+Era is that layer, as one API call.
+
+## Traditional context vs. Era
+
+| | Traditional context management | With Era |
+| --- | --- | --- |
+| What the model sees | Raw message history | History **plus** a typed read: intent, goal, urgency, emotion |
+| "Why is the user here?" | Inferred from the last message, implicitly | Explicit, with confidence: `intent=validating(0.95)` |
+| What to do this turn | Left entirely to the model | A recommended action: `[REC] action=validate do="Confirm immediately…"` |
+| Signals across turns | Diluted as history grows | Accumulated and re-distilled every turn |
+| Engineering cost | Classifiers, tags, and heuristics you build and maintain | `turnContext()` |
+
+Nothing about your stack changes: same model, same prompt, same framework. Era adds one block of text to the system prompt you already have.
+
+## Where Era changes outcomes
+
+Era earns its keep where the *live read on the user* decides the outcome:
+
+- **Engagement products** — companions, fan apps, consumer agents. A generic reply ends the session; a reply that reads the moment extends it.
+- **Sales and commerce** — the same question means different things from a browser and a buyer. Telling "researching" from "deciding" is revenue.
+- **Support** — urgency and emotion decide routing. The message that reads mild but isn't is the one that matters.
+
+Where it's less of a fit: single-shot tools, stateless Q&A, and workloads with no ongoing user relationship — there's no session for Era to read.
+
+## Use case library
+
+Real conversations, run live through Era, with the agent's actual replies before and after. Each one shows the block that made the difference.
+
+<CardGroup cols={2}>
+  <Card title="Racing series fan companion" icon="flag-checkered" href="/use-cases/fan-companion">
+    An anxious fan, five words, and the difference between a deflection and a resolved moment.
+  </Card>
+</CardGroup>
+
+More coming: an e-commerce shopping companion (abandoned cart → purchase) and B2C support routing (urgency detection → faster resolution).

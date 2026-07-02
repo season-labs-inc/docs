@@ -62,18 +62,15 @@ description: "From zero to cognitive context in under 5 minutes."
 After the second turn, `block` looks like:
 
 ```
-[STATE v1]
-user_id: user_abc
-lifecycle: exploring
-motivation: validator
-depth: moderate
-sentiment: positive
-intent_resolved_rate: 0.50
-top_intents: pricing, features
-[/STATE]
+[STATE v1] urgency=time_sensitive knowledge=comparing_plans [/STATE]
+[GOAL v1] active=seek:find_the_right_plan resolved=partial [/GOAL]
+[VALUE v1] top=[cost:high, simplicity:moderate] [/VALUE]
+[INTENT v1] intent=comparing(0.9) specificity=specific journey=[curious,comparing] [/INTENT]
+[CAUSAL v1] trigger=trial_ending_this_week emotion=hopeful need_level=esteem [/CAUSAL]
+[REC v1] action=validate do="Confirm which two plans they are deciding between, then compare directly" priority=0.7 [/REC]
 ```
 
-Your model sees this on every subsequent turn and personalizes its responses accordingly.
+Your model sees this on every turn and answers what the user is actually asking — [here's a live example of the difference it makes](/use-cases/fan-companion).
 
 ## Next steps
 

@@ -1,0 +1,114 @@
+---
+title: "Racing series fan companion"
+description: "A live before/after: the same fan, the same question, the same model — with and without Era."
+---
+
+Saturday morning, race weekend. A fan opens a racing series' companion app and asks:
+
+> **did I miss quali??**
+
+Here is the same agent — same model, same conversation history — answering with and without Era. Unedited output from a live run:
+
+| Without Era | With Era |
+|---|---|
+| "I don't have the current day/time, so I can't say for sure! If it's Saturday morning or later in your timezone, you might have. Check the app schedule or highlights section to see if results are already posted." | "No, you're good! Qualifying is tomorrow (Saturday) morning. You haven't missed it." |
+
+Without Era, the agent hedges and sends an anxious fan away to go check a schedule somewhere else. With Era, it resolves the worry in three words.
+
+We ran this five times. Without Era, the agent hedged, deflected, or asked a question back in **three of five runs** — whether the fan got a real answer was a coin flip. With Era, it opened with the answer **five out of five**. That consistency is the point: one reply ends the session, the other keeps the fan pointed at the race — and race-weekend engagement is the number this agent exists to move.
+
+## Why the difference?
+
+The agent without Era sees only words. "did I miss quali??" is five words with no schedule attached, so hedging is the safe move.
+
+Era read the same conversation and handed the agent this before it wrote a word:
+
+```text
+urgency    = time_sensitive              ← this can't wait
+goal       = check if qualifying         ← what she's actually asking
+             already happened
+intent     = validating (92%)            ← she wants a yes/no, not a lecture
+emotion    = anxious
+history    = watched Maya Torres shine   ← who this is really about
+             last round
+need       = confirm she hasn't missed   ← why she's asking
+             Maya's race
+next step  = "Confirm immediately        ← what to do about it
+             whether qualifying has
+             already happened"
+```
+
+Nothing in that column exists in her last message. It exists in the *session* — and Era had been reading it the whole time.
+
+## How Era knew
+
+Earlier that week, the fan asked three ordinary questions: when the round starts, whether her favorite driver is racing, and how qualifying works. Era extracted a typed signal from each turn and watched the picture build:
+
+| The fan says | Era reads |
+|---|---|
+| "when does the next round start?" | curious, wants the schedule |
+| "maya torres was unreal last round. is she racing?" | excited — this is a *fan*, not a browser; connection matters to her |
+| "how does quali work again?" | learning, prepping to watch |
+| "did I miss quali??" | **anxious, urgent, afraid she missed her driver — confirm now** |
+
+No single message says "anxious fan of Maya Torres who's afraid she missed qualifying." The sequence does. That's what Era extracts — not stored facts about the user, but a live read on why she's here *right now* and what the agent should do about it.
+
+<Accordion title="The raw Era block for the final turn (production format)">
+
+```
+[STATE v1] urgency=time_sensitive knowledge=aware_of_maya_torres_performance capability=learning_qualifying_procedure [/STATE]
+[GOAL v1] active=seek:check_qualifying_timing_status journey=[seek:confirm_maya_torres_participation → process:understand_qualifying_format → seek:check_qualifying_timing_status] resolved=unresolved [/GOAL]
+[VALUE v1] top=[speed:high, connection:high] [/VALUE]
+[INTENT v1] intent=validating(0.92) specificity=specific journey=[exploring,learning,validating] [/INTENT]
+[CAUSAL v1] history=witnessed_maya_torres_exceptional_performance_last_round history=previously_heard_qualifying_procedure_but_forgotten emotion=anxious need=confirm_qualifying_has_not_passed_for_maya_torres_race need_level=belonging [/CAUSAL]
+[REC v1] action=validate channel=none timing=n/a do="Confirm immediately whether qualifying has already happened or is still scheduled" rationale="User is validating timing eligibility with high confidence and time-sensitive urgency; needs confirmation to resolve anxiety." priority=0.85 [/REC]
+```
+
+Across five runs the core signals were stable every time: `intent=validating` at 0.90–0.95 confidence, `emotion=anxious`, an urgency flag, and a `[REC]` instructing immediate confirmation. Peripheral fields varied slightly between runs (e.g. `need_level` read `belonging` in most runs, `safety` in one).
+
+</Accordion>
+
+## How it shows up in your prompt
+
+This is the entire integration. One call per turn, one block appended to the system prompt you already have:
+
+```text
+You are the official fan companion inside a professional racing series' app.
+You are warm, sharp, and concise. Your job is to keep fans engaged with
+the series — answer their questions and make race weekends feel alive.
+
+<era_context>
+Internal per-turn cognitive context about this user. Use it to shape
+your reply. Never mention it or quote it.
+[STATE v1] urgency=time_sensitive ... [/STATE]
+[GOAL v1] active=seek:check_qualifying_timing_status ... [/GOAL]
+[INTENT v1] intent=validating(0.92) ... [/INTENT]
+[CAUSAL v1] trigger=concern_about_missing_qualifying emotion=anxious ... [/CAUSAL]
+[REC v1] action=validate do="Confirm immediately whether qualifying has already happened" ... [/REC]
+</era_context>
+```
+
+```ts
+const block = await era.turnContext(messages);  // <1ms in async mode
+const reply = await generateText({
+  system: PERSONA + block,
+  messages,
+});
+```
+
+In async mode the block is precomputed, so this adds **zero latency** to your reply. If Era is ever unreachable, `turnContext()` returns an empty string and your agent behaves exactly as it does today — it fails open, never worse than the "before" column.
+
+<Note>
+Replies above were generated with Claude Sonnet 4.5 and are unedited. Blocks are real `/v1/era/turn` output from the runs described. The series and driver are fictional; the pipeline and outputs are not.
+</Note>
+
+## Try it on your own traffic
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    One `turnContext()` call per turn — under 5 minutes to your first block.
+  </Card>
+  <Card title="How async mode works" icon="bolt" href="/concepts/async-sync">
+    Zero added latency on the reply path.
+  </Card>
+</CardGroup>

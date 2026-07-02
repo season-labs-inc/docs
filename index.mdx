@@ -1,51 +1,36 @@
 ---
 title: "Introduction"
-description: "Era tells your agent why the user is here — live intent, urgency, and lifecycle state, injected into your prompt every turn."
+description: "Era tells your AI agent why the user is here — what they want right now, how urgent it is, and what to do about it."
 ---
 
 ## What is Era?
 
-Era is not memory. Memory systems remember facts about a user — "has a dog named Rex." Era answers a different question: **why is this user here right now, what do they want, how urgent is it, and what should your agent do about it?**
+Era gives your AI agent a live read on the user. Once per turn, you call `turnContext()` and get back a short text block. You append it to your system prompt. That's the whole integration.
 
-Every turn, Era reads the conversation and returns a typed context block — state, goal, values, intent, and a recommended action — that you inject into your system prompt. One call per turn:
+The block looks like this:
 
 ```
-[STATE v1] situation=duplicate_charge_on_card urgency=high knowledge=knows_refund_policy [/STATE]
-[GOAL v1] active=do:reverse the duplicate charge journey=[seek:find charge origin → do:reverse the duplicate charge] resolved=unresolved [/GOAL]
-[VALUE v1] top=[speed:high, trust:moderate] [/VALUE]
-[INTENT v1] intent=deciding(0.84) specificity=specific journey=[curious,validating,deciding] [/INTENT]
-[CAUSAL v1] trigger=statement_closes_tomorrow prior_attempt=contacted_bank_first emotion=frustrated need=fast resolution need_level=safety [/CAUSAL]
-[REC v1] action=validate channel=in_app timing=0 do="Confirm the duplicate and start the refund — skip re-verification." rationale="User has said 'quickly' twice; identity already verified turn 1." priority=1 [/REC]
+[STATE v1] urgency=immediate knowledge=uncertain_about_qualifying_format [/STATE]
+[GOAL v1] active=seek:confirm_if_qualifying_already_happened resolved=unresolved [/GOAL]
+[INTENT v1] intent=validating(0.95) specificity=specific journey=[exploring,learning,validating] [/INTENT]
+[CAUSAL v1] trigger=fear_of_missing_session emotion=anxious need_level=safety [/CAUSAL]
+[REC v1] action=validate do="Confirm immediately whether they missed qualifying" priority=0.85 [/REC]
 ```
 
-Your agent reads this and stops behaving generically — it knows the user is frustrated, values speed over thoroughness, and needs escalation, before writing a single word.
+With this in its prompt, your agent stops guessing. It knows the user is anxious, knows what they're really asking, and knows what to do — before it writes a word. [See a real conversation with and without it](/use-cases/fan-companion).
 
-If you already run a memory layer (Mem0, Zep, or your own), keep it. Memory tells your agent what's true; Era tells it what's happening. The two blocks inject side by side.
+Era is not a memory system. Memory stores facts about a user — "has a dog named Rex." Era reads the conversation as it happens and tells your agent what the user wants *right now*. If you already use a memory layer, keep it; the two work side by side.
 
-## Key properties
+## Core concepts
 
-<CardGroup cols={2}>
-  <Card title="Universal schema" icon="diagram-project">
-    Typed state / goal / value / causal nodes — not a per-vertical intent taxonomy. The same block works for support, sales, and companion agents.
-  </Card>
-  <Card title="Sub-millisecond in async mode" icon="bolt">
-    Stale-while-revalidate means no added latency on the critical path.
-  </Card>
-  <Card title="Fail-open" icon="shield-check">
-    Any error returns an empty string — your agent never breaks.
-  </Card>
-  <Card title="Zero dependencies" icon="feather">
-    Uses global `fetch`. No extra packages required. Works anywhere — plain class interface, Vercel AI SDK wrapper included.
-  </Card>
-</CardGroup>
+| Concept | Description |
+| --- | --- |
+| **Block** | The text Era returns each turn. You append it to your system prompt. |
+| **Signals** | What Era reads from the conversation: intent, goal, urgency, emotion, values. |
+| **Recommendation** | The `[REC]` line — what Era suggests your agent do on this turn. |
+| **Modes** | `async` (default) returns instantly with the previous turn's block. `sync` waits for a fresh one. |
 
-## See it work
-
-<Card title="Before / After: F1 Academy fan companion" icon="wand-magic-sparkles" href="/use-cases/f1-academy">
-  The same conversation with and without Era — and the block that made the difference.
-</Card>
-
-## How it fits into your stack
+## How does it work
 
 ```
 User message
@@ -60,19 +45,24 @@ Inject block into system prompt
 LLM call  →  Response to user
 ```
 
-Era runs **before** your LLM call. In `async` mode (the default) it returns instantly with the previous turn's precomputed block, so there is zero added latency on the critical path.
+1. **Your user sends a message.** Your app receives it as usual.
+2. **You call `era.turnContext(messages)`.** In async mode this returns instantly with the block computed from the previous turn — nothing waits on Era.
+3. **You append the block to your system prompt** and call your LLM exactly as you do today.
+4. **Era reads the new turn in the background** and updates the user's signals for the next call.
+
+If Era is ever unreachable, `turnContext()` returns an empty string and your agent behaves exactly as it did before Era. The SDK has no dependencies, and the same block format works for support, sales, and companion agents — there is no per-vertical setup.
 
 ## Next steps
 
 <CardGroup cols={2}>
+  <Card title="See it work" icon="wand-magic-sparkles" href="/use-cases/fan-companion">
+    A live before/after: the same fan question answered with and without Era.
+  </Card>
   <Card title="Quickstart" icon="rocket" href="/quickstart">
     Install and make your first `turnContext` call in under 5 minutes.
   </Card>
   <Card title="Async vs Sync" icon="arrows-left-right" href="/concepts/async-sync">
     Understand the two operating modes before going to production.
-  </Card>
-  <Card title="Era Class" icon="code" href="/sdk/era-class">
-    Full API reference for the Era class and all its options.
   </Card>
   <Card title="Vercel AI SDK" icon="puzzle-piece" href="/integrations/vercel-ai-sdk">
     Auto-inject context with a one-line middleware wrapper.

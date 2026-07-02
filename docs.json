@@ -18,9 +18,10 @@
         ]
       },
       {
-        "group": "Use Cases",
+        "group": "When to Use Era",
         "pages": [
-          "use-cases/f1-academy"
+          "when-to-use",
+          "use-cases/fan-companion"
         ]
       },
       {
