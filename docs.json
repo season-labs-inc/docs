@@ -56,7 +56,46 @@
           "icon": "github"
         }
       ]
-    }
+    },
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "When to use Era",
+        "pages": [
+          "when-to-use",
+          "use-cases/fan-companion",
+          "use-cases/ecommerce"
+        ]
+      },
+      {
+        "group": "Core Concepts",
+        "pages": [
+          "concepts/async-sync",
+          "concepts/fail-open",
+          "concepts/sessions"
+        ]
+      },
+      {
+        "group": "SDK Reference",
+        "pages": [
+          "sdk/era-class",
+          "sdk/types",
+          "sdk/helpers"
+        ]
+      },
+      {
+        "group": "Integrations",
+        "pages": [
+          "integrations/vercel-ai-sdk"
+        ]
+      }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",

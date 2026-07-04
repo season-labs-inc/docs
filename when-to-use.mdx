@@ -1,5 +1,5 @@
 ---
-title: "When to use Era vs Traditional context management"
+title: "vs Traditional context management"
 description: "Compare Era to how your agent handles context today, and see where it changes outcomes."
 ---
 
@@ -9,7 +9,7 @@ Most agents manage context the traditional way: put the conversation history in 
 
 - The user's real question was set up three turns ago, but the model weighs the last message heaviest and answers just that.
 - "did I miss it??" reads identically whether it comes from a curious first-timer or an anxious regular — the words carry no history.
-- The reply is *correct* but generic. Generic replies end sessions, stall purchases, and mis-route urgent cases.
+- The reply is _correct_ but generic. Generic replies end sessions, stall purchases, and mis-route urgent cases.
 
 Teams that hit this usually start hand-building a layer on top: an intent classifier here, sentiment tags there, session heuristics, prompt rules to stitch it together. That layer is real engineering, it's never done, and it's specific to their vertical.
 
@@ -17,7 +17,7 @@ Era is that layer, as one API call.
 
 ## Traditional context vs. Era
 
-| | Traditional context management | With Era |
+|  | Traditional context management | With Era |
 | --- | --- | --- |
 | What the model sees | Raw message history | History **plus** a typed read: intent, goal, urgency, emotion |
 | "Why is the user here?" | Inferred from the last message, implicitly | Explicit, with confidence: `intent=validating(0.95)` |
@@ -29,7 +29,7 @@ Nothing about your stack changes: same model, same prompt, same framework. Era a
 
 ## Where Era changes outcomes
 
-Era earns its keep where the *live read on the user* decides the outcome:
+Era earns its keep where the _live read on the user_ decides the outcome:
 
 - **Engagement products** — companions, fan apps, consumer agents. A generic reply ends the session; a reply that reads the moment extends it.
 - **Sales and commerce** — the same question means different things from a browser and a buyer. Telling "researching" from "deciding" is revenue.
@@ -45,8 +45,9 @@ Real conversations, run live through Era, with the agent's actual replies before
   <Card title="Racing series fan companion" icon="flag-checkered" href="/use-cases/fan-companion">
     An anxious fan, five words, and the difference between a deflection and a resolved moment.
   </Card>
+
   <Card title="E-commerce shopping companion" icon="cart-shopping" href="/use-cases/ecommerce">
-    The question that sounds like research but is the last objection before a $44 purchase.
+    The question that sounds like research but is the last objection before a \$44 purchase.
   </Card>
 </CardGroup>
 
