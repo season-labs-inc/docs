@@ -94,6 +94,12 @@
         "pages": [
           "integrations/vercel-ai-sdk"
         ]
+      },
+      {
+        "group": "FAQs",
+        "pages": [
+          "coming-soon"
+        ]
       }
     ]
   },
