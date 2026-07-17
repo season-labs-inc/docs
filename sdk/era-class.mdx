@@ -1,6 +1,6 @@
 ---
-title: "Era Class"
-description: "Core client for fetching cognitive context blocks."
+title: "Era class"
+description: "Core Server SDK client for fetching cognitive context blocks."
 ---
 
 ## Constructor
@@ -13,7 +13,7 @@ const era = new Era(options: EraOptions);
 
 See [`EraOptions`](/sdk/types#eraoptions) for the full options reference.
 
-**Throws** `Error` if `mode` is provided but is not `"async"` or `"sync"`.
+The constructor throws `Error` if `mode` is present but is not `"async"` or `"sync"`.
 
 ### Minimal example
 
@@ -25,14 +25,14 @@ const era = new Era({
 });
 ```
 
-### Full example
+### Example with defaults
 
 ```typescript
 const era = new Era({
   apiKey: process.env.ERA_API_KEY!,
   baseUrl: process.env.ERA_URL!,
   partnerId: "your_partner_id",
-  userId: "user_abc",
+  visitorId: "era_vid_00000000-0000-4000-8000-000000000000",
   sessionId: "session_xyz",
   mode: "async",
   brandVoice: "concise and direct",
@@ -46,46 +46,62 @@ const era = new Era({
 
 ## `turnContext(messages, options?)`
 
-Fetches the cognitive context block for the current turn and returns it as a string.
+Fetches a cognitive context block for the current turn.
 
 ```typescript
 async turnContext(
   messages: EraMessage[],
-  options?: TurnContextOptions
+  options?: TurnContextOptions,
 ): Promise<string>
 ```
 
 ### Parameters
 
 <ParamField path="messages" type="EraMessage[]" required>
-  The full conversation history up to and including the current user message. Era uses this to compute the context block. See [`EraMessage`](/sdk/types#eramessage).
+  Full conversation history through the current user message. See [`EraMessage`](/sdk/types#eramessage).
 </ParamField>
 
-<ParamField path="options.userId" type="string">
-  Overrides the `userId` set at construction. Scopes the context to this user.
+<ParamField path="options.visitorId" type="string">
+  Browser continuity identifier from the Era Web SDK.
+</ParamField>
+
+<ParamField path="options.partnerEndUserId" type="string">
+  Your stable identifier for an authenticated user. Supply it only from a trusted backend.
+</ParamField>
+
+<ParamField path="options.email" type="string">
+  Trusted email bridge assertion. Requires `partnerEndUserId`.
+</ParamField>
+
+<ParamField path="options.phone" type="string">
+  Trusted phone bridge assertion. Requires `partnerEndUserId`.
 </ParamField>
 
 <ParamField path="options.sessionId" type="string">
-  Overrides the `sessionId` set at construction. If omitted and no constructor default exists, a session ID is derived from the first user message via SHA-256.
+  Stable identifier for this conversation. It overrides the constructor default. If neither is present, the SDK derives a deterministic ID from the first user message.
 </ParamField>
+
+Pass at least `visitorId` or `partnerEndUserId`. If neither is available, the SDK returns `""` without making an Era request.
 
 ### Returns
 
-`Promise<string>` — the cognitive context block to inject into your system prompt.
+`Promise<string>` containing the cognitive context block to inject into your system prompt.
 
-Returns `""` (empty string) when:
-- The last message is not from the user
-- The Era service is unreachable or returns an error
-- The request times out after all retries
+The method returns `""` when:
 
-**Never throws.** See [Fail-Open Design](/concepts/fail-open).
+- The last normalized message is not from the user.
+- Neither `visitorId` nor `partnerEndUserId` is available.
+- An expected network, timeout, or Era API failure occurs after retries.
+
+Expected service failures fail open. Programming errors outside those paths can still reject. See [Fail-open design](/concepts/fail-open).
 
 ### Usage
 
 ```typescript
 const block = await era.turnContext(messages, {
-  userId: "user_abc",
-  sessionId: "session_xyz",
+  visitorId,
+  partnerEndUserId: authenticatedUser.id,
+  sessionId,
 });
 
 if (block) {
@@ -95,27 +111,29 @@ if (block) {
 
 ### Memoization
 
-Results are cached by `userId | sessionId | turn_index`. Calling `turnContext` multiple times with the same state makes only one HTTP request. See [Session Management](/concepts/sessions#memoization).
+The latest result is keyed by all identity assertions, `sessionId`, and the current one-based `turn_index`. Repeated calls with the same latest turn can share one request without reusing a block under a different identity. See [Identity and session management](/concepts/sessions#identity-aware-memoization).
 
 ---
 
 ## Request format
 
-Under the hood, `turnContext` sends a `POST` to `{baseUrl}/v1/era/turn`:
+Under the hood, `turnContext()` sends `POST {baseUrl}/v1/era/turn`:
 
 ```json
 {
   "partner_id": "your_partner_id",
-  "user_id": "user_abc",
+  "visitor_id": "era_vid_00000000-0000-4000-8000-000000000000",
+  "partner_end_user_id": "customer-user-123",
+  "email": "person@example.com",
   "session_id": "session_xyz",
   "mode": "async",
   "brand_voice": "concise and direct",
   "turns": [
-    { "role": "user", "turn_index": 0, "text": "Hello" },
-    { "role": "assistant", "turn_index": 1, "text": "Hi! How can I help?" },
-    { "role": "user", "turn_index": 2, "text": "What are your prices?" }
+    { "role": "user", "turn_index": 1, "text": "Hello" },
+    { "role": "assistant", "turn_index": 2, "text": "Hi! How can I help?" },
+    { "role": "user", "turn_index": 3, "text": "What are your prices?" }
   ]
 }
 ```
 
-Authentication is via the `X-API-Key` header.
+Authentication uses the secret `X-API-Key` request header. Keep this key on your trusted backend.

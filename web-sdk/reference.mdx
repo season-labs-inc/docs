@@ -1,0 +1,172 @@
+---
+title: "Web SDK API and errors"
+description: "Reference for EraWeb, exported types, and EraWebError."
+---
+
+<Badge color="purple">Web SDK beta</Badge>
+
+## `EraWeb`
+
+```typescript
+import { EraWeb } from "@season/era-web";
+
+const eraWeb = new EraWeb({
+  baseUrl: "https://your-era-endpoint.com",
+  publishableKey: "pk_era.your_partner.your_key_id.your_key",
+});
+```
+
+### Constructor options
+
+<ParamField path="baseUrl" type="string" required>
+  Base URL of the Era service. The SDK removes trailing slashes.
+</ParamField>
+
+<ParamField path="publishableKey" type="string" required>
+  Partner publishable key for browser identity routes. This is not a Server SDK secret API key.
+</ParamField>
+
+### `init(visitorId?)`
+
+```typescript
+init(visitorId?: string): Promise<string>
+```
+
+Without an argument, returns the current visitor ID. It reuses valid partner-scoped storage or creates a visitor. When given a UUIDv4, it adds the `era_vid_` prefix when needed, persists that visitor through the Era API, stores it locally, and returns the canonical ID.
+
+```typescript
+const visitorId = await eraWeb.init("22222222-2222-4222-8222-222222222222");
+// "era_vid_22222222-2222-4222-8222-222222222222"
+```
+
+The UUID suffix must be a lowercase UUIDv4. Invalid values throw before a request is made.
+
+### `getVisitorId()`
+
+```typescript
+getVisitorId(): string | null
+```
+
+Returns the synchronized visitor ID when initialized. Returns `null` before successful initialization. The SDK rechecks synchronized storage before returning a cached value.
+
+### `startVerification(type, identifier)`
+
+```typescript
+startVerification(
+  type: "email" | "phone",
+  identifier: string,
+): Promise<VerificationChallenge>
+```
+
+Initializes the visitor when needed, then starts email or phone verification. Use E.164 format for phone numbers.
+
+### `confirmVerification(challengeId, code)`
+
+```typescript
+confirmVerification(
+  challengeId: string,
+  code: string,
+): Promise<{ verified: true }>
+```
+
+Confirms a verification code. A successful response links the verified identifier to the visitor on the Era service.
+
+### `resendVerification(challengeId)`
+
+```typescript
+resendVerification(
+  challengeId: string,
+): Promise<VerificationChallenge>
+```
+
+Sends another code and returns the current challenge details. Use the returned `challengeId` for later calls.
+
+### `resetVisitor()`
+
+```typescript
+resetVisitor(): Promise<string>
+```
+
+Creates, stores, and returns a replacement visitor. It aborts older same-page operations. See [Identity lifecycle](/web-sdk/identity#reset-a-visitor).
+
+## Exported types
+
+```typescript
+interface EraWebOptions {
+  baseUrl: string;
+  publishableKey: string;
+}
+
+type VerificationType = "email" | "phone";
+
+interface VerificationChallenge {
+  challengeId: string;
+  maskedIdentifier: string;
+  expiresAt: string;
+}
+```
+
+## `EraWebError`
+
+SDK and API failures reject with `EraWebError`.
+
+```typescript
+class EraWebError extends Error {
+  readonly code: string;
+  readonly retryable: boolean;
+  readonly status: number | null;
+
+  constructor(
+    code: string,
+    message: string,
+    retryable: boolean,
+    status?: number | null,
+  );
+}
+```
+
+```typescript
+import { EraWebError } from "@season/era-web";
+
+try {
+  await eraWeb.startVerification("email", email);
+} catch (error) {
+  if (error instanceof EraWebError) {
+    console.error(error.code, error.message);
+    if (error.retryable) {
+      // Offer an explicit retry.
+    }
+  }
+}
+```
+
+<ParamField path="code" type="string">
+  Stable machine-readable code. Server validation failures can add API-specific codes.
+</ParamField>
+
+<ParamField path="message" type="string">
+  Safe error message suitable for application handling.
+</ParamField>
+
+<ParamField path="retryable" type="boolean">
+  Whether retrying the operation can succeed. The SDK does not retry automatically.
+</ParamField>
+
+<ParamField path="status" type="number | null">
+  HTTP status for an API response. Local failures use `null`.
+</ParamField>
+
+### SDK error codes
+
+| Code | Meaning | Retryable |
+| --- | --- | --- |
+| `visitor_reset` | The operation began before a visitor reset boundary | No |
+| `network_error` | The browser could not reach Era | Yes |
+| `invalid_response` | Era returned an unexpected success payload | No |
+| `request_failed` | The API returned an error without a usable code | Depends on the HTTP status |
+
+`visitor_reset` has `status: null`. Start a new verification flow against the replacement visitor instead of applying the previous operation.
+
+<Warning>
+  During beta, origin policy and broader abuse controls remain deferred. A publishable key is not a secret, but it should be scoped and revocable through your Era configuration.
+</Warning>

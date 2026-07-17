@@ -9,42 +9,71 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "index",
+              "when-to-use",
+              "sdk-chooser"
+            ]
+          },
+          {
+            "group": "Use cases",
+            "pages": [
+              "use-cases/fan-companion",
+              "use-cases/ecommerce"
+            ]
+          }
         ]
       },
       {
-        "group": "When to use Era vs Traditional context management",
-        "pages": [
-          "when-to-use",
-          "use-cases/fan-companion",
-          "use-cases/ecommerce"
+        "tab": "Server SDK",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/async-sync",
+              "concepts/fail-open",
+              "concepts/sessions"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "sdk/era-class",
+              "sdk/types",
+              "sdk/helpers"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/vercel-ai-sdk"
+            ]
+          }
         ]
       },
       {
-        "group": "Core Concepts",
-        "pages": [
-          "concepts/async-sync",
-          "concepts/fail-open",
-          "concepts/sessions"
-        ]
-      },
-      {
-        "group": "SDK Reference",
-        "pages": [
-          "sdk/era-class",
-          "sdk/types",
-          "sdk/helpers"
-        ]
-      },
-      {
-        "group": "Integrations",
-        "pages": [
-          "integrations/vercel-ai-sdk"
+        "tab": "Web SDK",
+        "groups": [
+          {
+            "group": "Web SDK beta",
+            "pages": [
+              "web-sdk/quickstart",
+              "web-sdk/identity",
+              "web-sdk/reference"
+            ]
+          }
         ]
       }
     ],
@@ -56,52 +85,7 @@
           "icon": "github"
         }
       ]
-    },
-    "groups": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      },
-      {
-        "group": "When to use Era",
-        "pages": [
-          "when-to-use",
-          "use-cases/fan-companion",
-          "use-cases/ecommerce"
-        ]
-      },
-      {
-        "group": "Core Concepts",
-        "pages": [
-          "concepts/async-sync",
-          "concepts/fail-open",
-          "concepts/sessions"
-        ]
-      },
-      {
-        "group": "SDK Reference",
-        "pages": [
-          "sdk/era-class",
-          "sdk/types",
-          "sdk/helpers"
-        ]
-      },
-      {
-        "group": "Integrations",
-        "pages": [
-          "integrations/vercel-ai-sdk"
-        ]
-      },
-      {
-        "group": "FAQs",
-        "pages": [
-          "coming-soon"
-        ]
-      }
-    ]
+    }
   },
   "logo": {
     "light": "/logo/light.svg",

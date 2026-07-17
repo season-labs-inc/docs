@@ -28,7 +28,7 @@ Era is not a memory system. Memory stores facts about a user — "has a dog name
 | **Block** | The text Era returns each turn. You append it to your system prompt. |
 | **Signals** | What Era reads from the conversation: intent, goal, urgency, emotion, values. |
 | **Recommendation** | The `[REC]` line — what Era suggests your agent do on this turn. |
-| **Modes** | `async` (default) returns instantly with the previous turn's block. `sync` waits for a fresh one. |
+| **Modes** | `async` (default) returns the previous turn's precomputed block after a short API call. `sync` waits for a fresh one. |
 
 ## How does it work
 
@@ -36,7 +36,7 @@ Era is not a memory system. Memory stores facts about a user — "has a dog name
 User message
      │
      ▼
-era.turnContext(messages)   ←── Era service (non-blocking in async mode)
+era.turnContext(messages)   ←── Era service (previous block in async mode)
      │
      ▼
 Inject block into system prompt
@@ -46,11 +46,11 @@ LLM call  →  Response to user
 ```
 
 1. **Your user sends a message.** Your app receives it as usual.
-2. **You call `era.turnContext(messages)`.** In async mode this returns instantly with the block computed from the previous turn — nothing waits on Era.
+2. **You call `era.turnContext(messages)`.** In async mode the API returns the block computed from the previous turn without waiting for the current extraction pipeline.
 3. **You append the block to your system prompt** and call your LLM exactly as you do today.
 4. **Era reads the new turn in the background** and updates the user's signals for the next call.
 
-If Era is ever unreachable, `turnContext()` returns an empty string and your agent behaves exactly as it did before Era. The SDK has no dependencies, and the same block format works for support, sales, and companion agents — there is no per-vertical setup.
+If Era is unreachable, expected service failures return an empty string and your agent continues without an Era block. The SDK has no runtime dependencies, and the same block format works for support, sales, and companion agents — there is no per-vertical setup.
 
 ## Next steps
 
@@ -59,7 +59,10 @@ If Era is ever unreachable, `turnContext()` returns an empty string and your age
     A live before/after: the same fan question answered with and without Era.
   </Card>
   <Card title="Quickstart" icon="rocket" href="/quickstart">
-    Install and make your first `turnContext` call in under 5 minutes.
+    Add the Server SDK and make your first `turnContext` call.
+  </Card>
+  <Card title="Setup SDKs" icon="code-branch" href="/sdk-chooser">
+    Compare the browser and trusted-backend integrations.
   </Card>
   <Card title="Async vs Sync" icon="arrows-left-right" href="/concepts/async-sync">
     Understand the two operating modes before going to production.

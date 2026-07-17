@@ -38,14 +38,14 @@ description: "From zero to cognitive context in under 5 minutes."
     });
     ```
 
-    Pass `userId` and `sessionId` here if they are known at startup, or per-call inside `turnContext`.
+    You can set identity and session defaults here. For servers that handle multiple users, pass them per call instead.
   </Step>
 
   <Step title="Inject context before each LLM call">
     ```typescript
     // messages is the conversation history so far
     const block = await era.turnContext(messages, {
-      userId: "user_abc",
+      visitorId: "era_vid_00000000-0000-4000-8000-000000000000",
       sessionId: "session_xyz",
     });
 
@@ -53,9 +53,31 @@ description: "From zero to cognitive context in under 5 minutes."
     const systemPrompt = `You are a helpful assistant.\n\n${block}`;
     ```
 
-    `block` is a plain string — append it however your framework expects. On the very first turn, or if the Era service is unreachable, it returns `""` safely.
+    `block` is a plain string. Append it wherever your framework expects system context. In async mode, the first turn typically returns `""` because no previous block exists. Network and API failures also fail open with `""`.
   </Step>
 </Steps>
+
+## Choose the right identity
+
+Every `turnContext()` call needs at least one continuity identifier:
+
+- Pass `visitorId` from `@season/era-web` for browser continuity.
+- Pass `partnerEndUserId` when your trusted backend knows the signed-in user.
+- Pass both while connecting a browser visitor to an authenticated user.
+
+```typescript
+const block = await era.turnContext(messages, {
+  visitorId,
+  partnerEndUserId: authenticatedUser.id,
+  sessionId,
+});
+```
+
+Your backend can also assert a trusted `email` or `phone` alongside `partnerEndUserId`. Never copy these assertions from untrusted browser input without validating them first.
+
+<Warning>
+  Keep `ERA_API_KEY` on your trusted backend. Browser applications should forward `visitorId` to that backend instead of constructing `Era` in the browser.
+</Warning>
 
 ## What you get
 

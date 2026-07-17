@@ -1,0 +1,117 @@
+---
+title: "Identity lifecycle"
+description: "Understand visitor storage, verification, reset, and cross-tab synchronization."
+---
+
+<Badge color="purple">Web SDK beta</Badge>
+
+## Visitor continuity
+
+Call `init()` before you send a visitor ID to your backend.
+
+```typescript
+const visitorId = await eraWeb.init();
+```
+
+To persist a visitor UUID supplied by your application, pass it to `init()`. The
+SDK adds the `era_vid_` prefix when needed and validates the UUIDv4 suffix before
+writing it to the Era visitor store:
+
+```typescript
+const visitorId = await eraWeb.init("22222222-2222-4222-8222-222222222222");
+// era_vid_22222222-2222-4222-8222-222222222222
+```
+
+The SDK stores the visitor under a partner-scoped `localStorage` key:
+
+```text
+era:visitor_id:<partnerId>
+```
+
+The visitor ID:
+
+- Identifies browser continuity for one Era partner.
+- Is not an authentication credential or session token.
+- Is reused across page loads when `localStorage` is available.
+- Falls back to shared in-memory state for SDK instances on the same page when storage is unavailable.
+
+SDK instances with the same publishable-key partner share initialization and current visitor state. Open tabs synchronize changes through browser storage events. Before returning a cached visitor, the SDK checks for a newer synchronized value.
+
+## Verify an email address or phone number
+
+Start verification with an explicit type.
+
+```typescript
+const challenge = await eraWeb.startVerification(
+  "email",
+  "person@example.com",
+);
+
+// For a phone number, use E.164 format.
+const smsChallenge = await eraWeb.startVerification(
+  "phone",
+  "+15551234567",
+);
+```
+
+Display `challenge.maskedIdentifier` so the user knows where Era sent the code. Use `challenge.expiresAt` to show expiry.
+
+```typescript
+const result = await eraWeb.confirmVerification(
+  challenge.challengeId,
+  code,
+);
+
+if (result.verified) {
+  // Continue your application flow.
+}
+```
+
+Verification proves control of the email address or phone number and links the current visitor server-side. It does not authenticate the user to your application and does not create a browser login session.
+
+## Resend a code
+
+```typescript
+const replacement = await eraWeb.resendVerification(
+  challenge.challengeId,
+);
+```
+
+Use the returned challenge for the next confirm or resend call. It contains updated expiry information and can have a new `challengeId`.
+
+The SDK does not automatically retry verification mutations. Apply retry behavior only when an `EraWebError` reports `retryable: true`, and avoid sending repeated OTP requests without a user action.
+
+## Reset a visitor
+
+```typescript
+const replacementVisitorId = await eraWeb.resetVisitor();
+```
+
+Reset is a strict boundary:
+
+- The SDK aborts same-page requests that began before reset.
+- Verification operations that race reset reject with `code: "visitor_reset"`.
+- An unresolved earlier `init()` converges on the replacement visitor.
+- Initialized SDK instances on the page and other tabs synchronize to the replacement visitor.
+- Repeated resets produce a fresh current visitor for each completed reset.
+
+Reset removes only the local association with the previous visitor and creates a fresh visitor. It does not delete the old server-side identity, unlink aliases, or erase data associated with that identity.
+
+Catch `visitor_reset` and restart the user action with the replacement visitor when appropriate.
+
+```typescript
+import { EraWebError } from "@season/era-web";
+
+try {
+  await eraWeb.confirmVerification(challengeId, code);
+} catch (error) {
+  if (error instanceof EraWebError && error.code === "visitor_reset") {
+    await eraWeb.init();
+    // Ask the user to restart verification for the new visitor.
+  }
+}
+```
+
+<Warning>
+  Browser-origin enforcement and broader abuse controls are deferred during beta. Keep server secrets out of the browser and apply your own product-level controls to verification flows.
+</Warning>

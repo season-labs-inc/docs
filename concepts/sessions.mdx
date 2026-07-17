@@ -1,76 +1,102 @@
 ---
-title: "Session Management"
-description: "How Era identifies users and deduplicates requests within a session."
+title: "Identity and session management"
+description: "How Era maintains identity continuity and separates conversations."
 ---
 
-## User and session IDs
+## Identity inputs
 
-Era scopes context blocks to a `(userId, sessionId)` pair. You can provide these in two places:
+Era requires `visitorId`, `partnerEndUserId`, or both for each `turnContext()` call.
 
-**At construction time** — applied to every `turnContext` call unless overridden:
+- `visitorId` maintains continuity for a browser visitor. Obtain it from the [Web SDK](/web-sdk/quickstart).
+- `partnerEndUserId` is your stable identifier for an authenticated user. Supply it only from a trusted backend.
+- Supplying both connects the browser conversation with the partner user identity.
+
+You can set defaults when you create `Era`:
 
 ```typescript
 const era = new Era({
   apiKey: "...",
   baseUrl: "...",
   partnerId: "...",
-  userId: "user_abc",
+  visitorId: "era_vid_00000000-0000-4000-8000-000000000000",
   sessionId: "session_xyz",
 });
 ```
 
-**Per call** — overrides the constructor defaults for that specific call:
+For a shared server instance, pass identity per call:
 
 ```typescript
 const block = await era.turnContext(messages, {
-  userId: "user_abc",
-  sessionId: "session_xyz",
+  visitorId,
+  partnerEndUserId: authenticatedUser.id,
+  sessionId,
 });
 ```
 
-## Automatic session ID generation
+If neither continuity identifier is present, the SDK fails open with `""` and does not make a request or invent an identity.
 
-If you do not provide a `sessionId`, Era generates one automatically from the text of the **first user message** using a SHA-256 hash. This means:
+## Trusted identity bridges
 
-- The same conversation always maps to the same session ID.
-- You don't need to manage session IDs if your conversation history is consistent.
+When `partnerEndUserId` is present, your trusted backend can also provide an email address or phone number:
 
 ```typescript
-// No sessionId provided — Era derives it from messages[0].content
-const block = await era.turnContext(messages, { userId: "user_abc" });
+const block = await era.turnContext(messages, {
+  visitorId,
+  partnerEndUserId: authenticatedUser.id,
+  email: authenticatedUser.verifiedEmail,
+  phone: authenticatedUser.phone,
+  sessionId,
+});
 ```
+
+Bridge assertions must come from data your backend trusts. Do not forward an email address or phone number directly from browser input without validating ownership.
+
+## Session IDs
+
+Use one stable, unique `sessionId` for the lifetime of a conversation. Create a new value when the user starts a new conversation. Do not reuse the same session across unrelated conversations.
+
+If you omit `sessionId`, the SDK derives one from the first user message with SHA-256. That fallback is deterministic, so two conversations that start with the same text can receive the same derived ID.
 
 <Note>
-  If `userId` is also not provided, Era uses a fallback. For production use, always pass a stable `userId` so context accumulates correctly across sessions.
+  For production chat, pass your application's conversation ID as `sessionId`. The derived ID is convenient for simple examples and tests, but it is not a substitute for a unique conversation identifier.
 </Note>
 
-## Memoization
+## Identity-aware memoization
 
-Era memoizes results by `userId | sessionId | turn_index`. If you call `turnContext` multiple times with the same conversation state (e.g. because your framework retries or streams in steps), only one HTTP request is made.
+The TypeScript SDK memoizes the latest turn lookup. Its key includes:
+
+- `visitorId`
+- `partnerEndUserId`
+- `email` and `phone`
+- `sessionId`
+- The current one-based `turn_index`
+
+Repeated middleware calls for the same latest turn can share one result. A change to any identity assertion creates a different key, which prevents a cached block from one identity context being reused for another.
 
 ```typescript
-// First call — makes a request
-const block1 = await era.turnContext(messages, { userId, sessionId });
+const options = { visitorId, partnerEndUserId, sessionId };
 
-// Same messages, same user/session — returns cached result instantly
-const block2 = await era.turnContext(messages, { userId, sessionId });
+const block1 = await era.turnContext(messages, options);
+const block2 = await era.turnContext(messages, options);
 
-// block1 === block2, only one fetch was made
+// Duplicate calls for the latest turn share the memoized result.
 ```
 
-This makes Era safe to use inside middleware that may be called multiple times per model invocation (e.g. Vercel AI SDK streaming steps).
-
-## Multi-user / multi-session agents
-
-For agents that handle multiple users in the same process, construct one shared `Era` instance and pass `userId` / `sessionId` per call:
+The memoized entry belongs to each `Era` instance. Construct one shared instance for a server process and pass identity and session data per request.
 
 ```typescript
 const era = new Era({ apiKey, baseUrl, partnerId });
 
-async function handleTurn(userId: string, sessionId: string, messages: Message[]) {
-  const block = await era.turnContext(messages, { userId, sessionId });
-  // ...
+async function handleTurn(
+  visitorId: string,
+  partnerEndUserId: string | undefined,
+  sessionId: string,
+  messages: Message[],
+) {
+  return era.turnContext(messages, {
+    visitorId,
+    partnerEndUserId,
+    sessionId,
+  });
 }
 ```
-
-The memoization cache is per `Era` instance, so each instance has its own isolated cache.

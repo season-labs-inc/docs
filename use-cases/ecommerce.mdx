@@ -84,14 +84,14 @@ your reply. Never mention it or quote it.
 ```
 
 ```ts
-const block = await era.turnContext(messages);  // <1ms in async mode
+const block = await era.turnContext(messages);  // returns the previous block in async mode
 const reply = await generateText({
   system: PERSONA + block,
   messages,
 });
 ```
 
-In async mode the block is precomputed, so this adds **zero latency** to your reply. If Era is ever unreachable, `turnContext()` returns an empty string and your agent behaves exactly as it does today.
+In async mode the extraction work is precomputed, so the call avoids waiting for the current turn's analysis. The API round trip still adds some latency. If Era is unreachable, `turnContext()` fails open with an empty string.
 
 <Note>
 The retailer, shopper, brands, products, and prices in this scenario are all fictional — "DermaBase" and "Solstice Skin" do not exist. The pipeline and outputs are real: replies were generated with Claude Sonnet 4.5 and are unedited, and blocks are actual `/v1/era/turn` output from the runs described.
@@ -104,6 +104,6 @@ The retailer, shopper, brands, products, and prices in this scenario are all fic
     One `turnContext()` call per turn — under 5 minutes to your first block.
   </Card>
   <Card title="How async mode works" icon="bolt" href="/concepts/async-sync">
-    Zero added latency on the reply path.
+    Keep extraction off the reply path.
   </Card>
 </CardGroup>

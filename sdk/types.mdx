@@ -12,7 +12,10 @@ interface EraOptions {
   apiKey: string;
   baseUrl: string;
   partnerId: string;
-  userId?: string;
+  visitorId?: string;
+  partnerEndUserId?: string;
+  email?: string;
+  phone?: string;
   sessionId?: string;
   mode?: EraMode;
   brandVoice?: string;
@@ -37,16 +40,28 @@ interface EraOptions {
   Your partner identifier. Scopes all context blocks to your account.
 </ParamField>
 
-<ParamField path="userId" type="string">
-  Default user ID for all `turnContext` calls. Can be overridden per call.
+<ParamField path="visitorId" type="string">
+  Default browser continuity identifier. Obtain it from the Era Web SDK.
+</ParamField>
+
+<ParamField path="partnerEndUserId" type="string">
+  Default stable partner identifier for an authenticated user. Supply it only from a trusted backend.
+</ParamField>
+
+<ParamField path="email" type="string">
+  Default trusted email bridge assertion. Requires `partnerEndUserId`.
+</ParamField>
+
+<ParamField path="phone" type="string">
+  Default trusted phone bridge assertion. Requires `partnerEndUserId`.
 </ParamField>
 
 <ParamField path="sessionId" type="string">
-  Default session ID for all `turnContext` calls. Can be overridden per call. If omitted, derived automatically from the first user message.
+  Default conversation session ID. If omitted, the SDK derives a deterministic value from the first user message. Prefer an application-generated unique conversation ID in production.
 </ParamField>
 
 <ParamField path="mode" type='"async" | "sync"' default='"async"'>
-  Operating mode. `async` returns instantly with the previous turn's block (zero latency). `sync` waits for the current turn's computation. See [Async vs Sync Modes](/concepts/async-sync).
+  Operating mode. `async` returns the previous turn's precomputed block after an API round trip. `sync` waits for the current turn's computation. See [Async vs Sync Modes](/concepts/async-sync).
 </ParamField>
 
 <ParamField path="brandVoice" type="string">
@@ -123,11 +138,16 @@ interface EraTurn {
 
 ## TurnContextOptions
 
-Options passed to `era.turnContext()` to override per-call user/session identifiers.
+Options passed to `era.turnContext()` to override per-call identity and session values.
 
 ```typescript
 interface TurnContextOptions {
-  userId?: string;
+  visitorId?: string;
+  partnerEndUserId?: string;
+  email?: string;
+  phone?: string;
   sessionId?: string;
 }
 ```
+
+At least `visitorId` or `partnerEndUserId` must resolve from the call or constructor defaults. Email and phone bridge assertions require `partnerEndUserId` and must come from a trusted backend.

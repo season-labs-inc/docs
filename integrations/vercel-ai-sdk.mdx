@@ -51,7 +51,7 @@ const era = new Era({
 const model = withEra(
   anthropic("claude-sonnet-4-6"),
   era,
-  { userId: "user_abc", sessionId: "session_xyz" }
+  { visitorId, partnerEndUserId, sessionId }
 );
 
 // Era context is injected automatically — no manual string appending
@@ -71,9 +71,9 @@ On every model invocation, the middleware:
 
 The modified prompt is then passed to the underlying model. Your application code never touches the block.
 
-### Dynamic user/session IDs
+### Dynamic identity and session values
 
-Pass a per-request `userId` and `sessionId` via the `options` parameter of `withEra`. For truly dynamic IDs (e.g. resolved from a request context), use `eraMiddleware` directly and call `turnContext` yourself.
+Pass per-request `visitorId`, `partnerEndUserId`, trusted `email`, `phone`, and `sessionId` values through the `options` parameter of `withEra`. For values resolved later from request context, call `turnContext()` directly in your request handler.
 
 ---
 
@@ -98,7 +98,7 @@ import { eraMiddleware } from "@season/era-sdk/ai-sdk";
 
 const model = wrapLanguageModel({
   model: anthropic("claude-sonnet-4-6"),
-  middleware: eraMiddleware(era, { userId, sessionId }),
+  middleware: eraMiddleware(era, { visitorId, partnerEndUserId, sessionId }),
 });
 ```
 
@@ -111,7 +111,7 @@ const model = wrapLanguageModel({
   model: anthropic("claude-sonnet-4-6"),
   middleware: [
     loggingMiddleware(),
-    eraMiddleware(era, { userId, sessionId }),
+    eraMiddleware(era, { visitorId, partnerEndUserId, sessionId }),
     rateLimitMiddleware(),
   ],
 });
@@ -121,12 +121,16 @@ const model = wrapLanguageModel({
 
 ## Notes
 
-**Retry safety.** The Vercel AI SDK may invoke `transformParams` multiple times per user turn (e.g. during streaming retries or multi-step tool calls). Era's memoization ensures only one HTTP request is made per unique `userId | sessionId | turn_index` combination regardless of how many times the middleware runs.
+**Retry safety.** The Vercel AI SDK may invoke `transformParams` multiple times per turn, including during streaming retries or multi-step tool calls. Era memoizes the latest lookup using every identity assertion, the session, and the one-based turn index. Duplicate calls can share a result without reusing a block after the identity context changes.
 
 **Works with any provider.** `withEra` wraps the `LanguageModel` interface, so it works with any Vercel AI SDK provider — Anthropic, OpenAI, Google, Mistral, etc.
 
 ```typescript
 import { openai } from "@ai-sdk/openai";
 
-const model = withEra(openai("gpt-4o"), era, { userId, sessionId });
+const model = withEra(openai("gpt-4o"), era, {
+  visitorId,
+  partnerEndUserId,
+  sessionId,
+});
 ```

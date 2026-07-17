@@ -9,7 +9,7 @@ Era has two operating modes, controlled by the `mode` option when constructing t
 
 | Mode | Default timeout | Latency | Freshness |
 |------|----------------|---------|-----------|
-| `async` | 2 000 ms | ~0 ms (returns previous block) | Previous turn |
+| `async` | 2 000 ms | Short API round trip (returns previous block) | Previous turn |
 | `sync` | 30 000 ms | Waits for processing | Current turn |
 
 ## Async mode (default)
@@ -20,19 +20,19 @@ const era = new Era({ ..., mode: "async" });
 
 **Stale-while-revalidate.** When you call `turnContext` on turn N:
 
-1. The SDK immediately returns the block computed from turn N-1 (already precomputed in the background).
+1. The Era API returns the block computed from turn N-1.
 2. In the background, it kicks off computation for turn N so it is ready before turn N+1.
 
-The result: **zero latency on the critical path.** Your LLM call is never held up by Era.
+The extraction pipeline stays off the critical path. The `turnContext()` API request still adds network and service latency before your LLM call.
 
 ```
 Turn 1: block = ""           (nothing precomputed yet — first turn)
-Turn 2: block = <turn 1 context>   (instant — already computed)
-Turn 3: block = <turn 2 context>   (instant)
+Turn 2: block = <turn 1 context>   (already computed)
+Turn 3: block = <turn 2 context>   (already computed)
 ```
 
 <Note>
-  The very first turn always returns `""` in async mode because there is nothing precomputed yet. This is expected behavior.
+  A new async session typically returns `""` on its first turn because there is no previous block. This is expected behavior.
 </Note>
 
 ## Sync mode
@@ -46,7 +46,7 @@ Waits for the Era service to finish processing the **current** turn before retur
 Use sync mode when:
 - **Freshness matters more than latency** — e.g. a batch pipeline, a background worker, or a non-real-time flow.
 - **You are running evals** and want deterministic, fully-computed context.
-- **Your first-turn experience requires context** — sync guarantees a non-empty block even on turn 1 (once the service processes it).
+- **Your first-turn experience requires fresh context** — sync can return the current turn's block once the service processes it.
 
 <Warning>
   Sync mode adds Era's processing time to your LLM call latency. For interactive chat, prefer async mode.

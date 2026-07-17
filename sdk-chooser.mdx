@@ -1,0 +1,57 @@
+---
+title: "Setup SDKs"
+description: "Use the Web SDK for browser identity and the Server SDK for cognitive context."
+---
+
+Era provides two SDKs with different trust boundaries.
+
+| SDK | Use it for | Credential | Package |
+| --- | --- | --- | --- |
+| **Web SDK (beta)** | Create a browser visitor ID and verify an email address or phone number | Publishable key | `@season/era-web` |
+| **Server SDK** | Send conversations to Era and receive cognitive context | Secret API key | `@season/era-sdk` |
+
+<Warning>
+  Never expose a Server SDK secret API key in browser code. The Web SDK does not call `turnContext()`.
+</Warning>
+
+## Typical integration
+
+1. Initialize the Web SDK in the browser.
+2. Send its `visitorId` to your trusted backend with each chat request.
+3. Pass `visitorId` to `turnContext()` on the backend.
+4. Once your application knows the signed-in user, also pass your stable `partnerEndUserId` from the backend.
+
+```typescript Browser
+const visitorId = await eraWeb.init();
+
+await fetch("/api/chat", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ messages, visitorId }),
+});
+```
+
+```typescript Trusted backend
+import { Era } from "@season/era-sdk";
+
+const era = new Era({
+  apiKey: process.env.ERA_API_KEY!,
+  baseUrl: process.env.ERA_URL!,
+  partnerId: process.env.ERA_PARTNER_ID!,
+});
+
+const block = await era.turnContext(messages, {
+  visitorId,
+  partnerEndUserId: authenticatedUser.id,
+  sessionId,
+});
+```
+
+<CardGroup cols={2}>
+  <Card title="Server SDK quickstart" icon="server" href="/quickstart">
+    Add cognitive context from your trusted backend.
+  </Card>
+  <Card title="Web SDK quickstart" icon="browser" href="/web-sdk/quickstart">
+    Add browser visitor continuity and verification.
+  </Card>
+</CardGroup>

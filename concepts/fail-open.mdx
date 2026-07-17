@@ -1,18 +1,18 @@
 ---
-title: "Fail-Open Design"
-description: "Era never throws — your agent is always protected."
+title: "Fail-open design"
+description: "Era converts service failures into an empty context block."
 ---
 
 ## What fail-open means
 
-Every call to `turnContext()` returns a plain string. On any error — network failure, timeout, 4xx, 5xx, invalid response — it returns `""` instead of throwing.
+`turnContext()` converts expected network and Era API failures into `""` instead of rejecting. Your application can continue without cognitive context for that turn.
 
 ```typescript
 const block = await era.turnContext(messages);
-// block is always a string — never throws, never rejects
+// Era service failures return an empty string.
 ```
 
-Your agent continues normally; it just runs without cognitive context for that turn.
+The fail-open guarantee does not cover programming errors in your application or an invalid SDK constructor option. For example, the constructor throws if `mode` is neither `"async"` nor `"sync"`.
 
 ## What errors are caught
 
@@ -21,7 +21,7 @@ Your agent continues normally; it just runs without cognitive context for that t
 | Network failure / DNS error | Returns `""`, logs warning |
 | Request timeout | Returns `""`, logs warning |
 | HTTP 5xx | Retries up to `maxRetries`, then returns `""` |
-| HTTP 4xx | Returns `""` immediately (no retry — likely a config error) |
+| HTTP 4xx | Returns `""` immediately (no retry — configuration or usage error) |
 | Invalid JSON response | Returns `""`, logs warning |
 | Last message not from user | Returns `""` silently (not an error — see below) |
 
@@ -44,7 +44,7 @@ attempt 1 → fail → wait 200ms
 attempt 2 → fail → return ""
 ```
 
-4xx errors are **not retried** — they indicate a configuration problem (wrong API key, unknown partner ID) that won't resolve on its own.
+4xx errors are **not retried**. They indicate a configuration or usage problem, such as a wrong API key, unknown partner ID, or invalid identity assertion, that will not resolve through retrying.
 
 ## Logging
 
