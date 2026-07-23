@@ -3,8 +3,6 @@ title: "Identity lifecycle"
 description: "Understand visitor storage, verification, reset, and cross-tab synchronization."
 ---
 
-<Badge color="purple">Web SDK beta</Badge>
-
 ## Visitor continuity
 
 Call `init()` before you send a visitor ID to your backend.
@@ -119,5 +117,6 @@ try {
 ```
 
 <Warning>
-  Browser-origin enforcement and broader abuse controls are deferred during beta. Keep server secrets out of the browser and apply your own product-level controls to verification flows.
+  Keep Node SDK secrets out of the browser. Apply rate limits and other
+  product-level controls to verification flows.
 </Warning>

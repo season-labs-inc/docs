@@ -1,0 +1,99 @@
+---
+title: "Identity lifecycle"
+description: "Understand Flutter visitor storage, verification, reset, and client cleanup."
+---
+
+## Visitor ID
+
+Call `init()` before sending a visitor ID to your backend:
+
+```dart
+final visitorId = await era.init();
+```
+
+The SDK stores one visitor per Era partner with
+`SharedPreferencesAsync`. The storage key is:
+
+```text
+era:visitor_id:<partnerId>
+```
+
+When preferences are unavailable, the SDK keeps the visitor in memory for the
+current isolate.
+
+## Provide an existing UUID
+
+Pass a lowercase UUIDv4 when your application already has a visitor UUID:
+
+```dart
+final visitorId = await era.init(
+  '22222222-2222-4222-8222-222222222222',
+);
+// era_vid_22222222-2222-4222-8222-222222222222
+```
+
+The SDK adds the `era_vid_` prefix when needed. Invalid values throw
+`ArgumentError` before a request is made.
+
+## Verify email or phone
+
+Start a challenge:
+
+```dart
+final challenge = await era.startVerification(
+  VerificationType.email,
+  'person@example.com',
+);
+```
+
+Then submit the code collected by your UI:
+
+```dart
+final confirmation = await era.confirmVerification(
+  challenge.challengeId,
+  enteredCode,
+);
+```
+
+For phone verification, use `VerificationType.phone` and an E.164 phone
+number.
+
+Verification proves control of the email address or phone number. It does not
+sign the user in to your app. The returned `eraEndUserId` is an opaque
+continuity ID, not an authorization credential.
+
+## Resend a code
+
+```dart
+final replacement = await era.resendVerification(
+  challenge.challengeId,
+);
+```
+
+Use the returned challenge for the next confirm or resend call. Its ID and
+expiry can change. Only resend after a user action.
+
+## Reset a visitor
+
+Reset after logout, account switching, or a shared-device user change:
+
+```dart
+final replacementVisitorId = await era.resetVisitor();
+```
+
+Reset removes the local visitor association and creates a replacement. It does
+not delete the previous Era identity.
+
+Requests from the previous visitor are aborted. An operation that crosses the
+reset boundary throws `EraFlutterException` with code `visitor_reset`.
+
+## Close the client
+
+```dart
+era.close();
+```
+
+`close()` aborts requests owned by this client. It also closes the HTTP client
+when Era created it or when you passed `ownsHttpClient: true`.
+
+Calls after `close()` throw `EraFlutterException` with code `client_closed`.

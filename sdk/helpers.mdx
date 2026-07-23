@@ -1,81 +1,51 @@
 ---
-title: "Helper Functions"
-description: "Utility functions exported from the Era SDK."
+title: "Node SDK helpers"
+description: "Normalize messages and inspect the installed SDK version."
 ---
 
-## `messagesToTurns`
+## `messagesToTurns(messages)`
 
-Converts a standard AI SDK message array into the `EraTurn[]` format used internally by Era.
+Converts common chat messages into the format sent to Era.
 
 ```typescript
 import { messagesToTurns } from "@season/era-sdk";
 
-function messagesToTurns(messages: EraMessage[]): EraTurn[]
+const turns = messagesToTurns(messages);
 ```
 
-### What it does
+The function:
 
-1. **Filters** — keeps only messages with `role: "user"` or `role: "assistant"`. System messages, tool calls, and other roles are dropped.
-2. **Extracts text** — handles both plain string content and multimodal content arrays. For multimodal arrays, concatenates the text of all `type: "text"` parts; other parts (images, tool results) are ignored.
-3. **Drops empty turns** — messages with no text content after extraction are skipped.
-4. **Reindexes** — assigns consecutive, one-based `turn_index` values to the filtered result.
-
-### Returns
-
-`EraTurn[]` — an array of normalized turns ready to send to the Era service.
+- Keeps `user` and `assistant` messages.
+- Drops system, tool, and other roles.
+- Keeps plain text and text parts from multimodal content.
+- Drops images, tool results, and empty messages.
+- Adds consecutive `turn_index` values starting at 1.
 
 ### Example
 
 ```typescript
-import { messagesToTurns } from "@season/era-sdk";
-
 const messages = [
   { role: "system", content: "You are a helpful assistant." },
-  { role: "user",      content: "What are your prices?" },
+  { role: "user", content: "What are your prices?" },
   { role: "assistant", content: "Our plans start at $29/month." },
-  { role: "user",      content: "Do you have a free tier?" },
 ];
 
 const turns = messagesToTurns(messages);
 // [
-//   { role: "user",      turn_index: 1, text: "What are your prices?" },
+//   { role: "user", turn_index: 1, text: "What are your prices?" },
 //   { role: "assistant", turn_index: 2, text: "Our plans start at $29/month." },
-//   { role: "user",      turn_index: 3, text: "Do you have a free tier?" },
 // ]
 ```
 
-### Multimodal content
-
-```typescript
-const messages = [
-  {
-    role: "user",
-    content: [
-      { type: "text",  text: "What is in this image?" },
-      { type: "image", image: "data:image/png;base64,..." },
-    ],
-  },
-];
-
-const turns = messagesToTurns(messages);
-// [{ role: "user", turn_index: 1, text: "What is in this image?" }]
-// Image part is ignored; only text is forwarded.
-```
-
-### When to use this directly
-
-You typically don't need to call `messagesToTurns` yourself — `era.turnContext()` calls it internally. Use it directly if you are:
-- Inspecting the normalized turn array for debugging.
-- Building a custom integration that constructs the Era API request manually.
-
----
+`turnContext()` calls this function for you. Use it directly only to inspect
+normalization or build a custom HTTP integration.
 
 ## `VERSION`
 
-The current SDK version string.
+Contains the SDK version:
 
 ```typescript
 import { VERSION } from "@season/era-sdk";
 
-console.log(VERSION); // "0.1.0"
+console.log(VERSION);
 ```

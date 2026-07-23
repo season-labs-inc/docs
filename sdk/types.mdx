@@ -1,6 +1,6 @@
 ---
-title: "Types & Interfaces"
-description: "Full reference for all exported TypeScript types."
+title: "Node SDK types"
+description: "Options and data types exported by the Node SDK."
 ---
 
 ## EraOptions
@@ -41,19 +41,19 @@ interface EraOptions {
 </ParamField>
 
 <ParamField path="visitorId" type="string">
-  Default browser continuity identifier. Obtain it from the Era Web SDK.
+  Default visitor ID for `turnContext()` calls. Obtain it from the Web or Flutter SDK.
 </ParamField>
 
 <ParamField path="partnerEndUserId" type="string">
-  Default stable partner identifier for an authenticated user. Supply it only from a trusted backend.
+  Default stable ID for a signed-in user. It does not replace `visitorId`.
 </ParamField>
 
 <ParamField path="email" type="string">
-  Default trusted email bridge assertion. Requires `partnerEndUserId`.
+  Default backend-verified email address. Requires `partnerEndUserId`.
 </ParamField>
 
 <ParamField path="phone" type="string">
-  Default trusted phone bridge assertion. Requires `partnerEndUserId`.
+  Default backend-verified phone number. Requires `partnerEndUserId`.
 </ParamField>
 
 <ParamField path="sessionId" type="string">
@@ -61,7 +61,7 @@ interface EraOptions {
 </ParamField>
 
 <ParamField path="mode" type='"async" | "sync"' default='"async"'>
-  Operating mode. `async` returns the previous turn's precomputed block after an API round trip. `sync` waits for the current turn's computation. See [Async vs Sync Modes](/concepts/async-sync).
+  `async` returns the previous turn's prepared block. `sync` waits for current-turn context. See [Async and sync modes](/concepts/async-sync).
 </ParamField>
 
 <ParamField path="brandVoice" type="string">
@@ -81,7 +81,7 @@ interface EraOptions {
 </ParamField>
 
 <ParamField path="debug" type="boolean" default="false">
-  When `true`, logs verbose per-turn output including the injected block and request details.
+  Enables informational Node SDK logs when you do not provide a custom logger.
 </ParamField>
 
 ---
@@ -150,4 +150,6 @@ interface TurnContextOptions {
 }
 ```
 
-At least `visitorId` or `partnerEndUserId` must resolve from the call or constructor defaults. Email and phone bridge assertions require `partnerEndUserId` and must come from a trusted backend.
+`visitorId` must resolve from the call or constructor defaults.
+`partnerEndUserId` is optional. Email and phone assertions require
+`partnerEndUserId` and must come from trusted backend data.

@@ -1,66 +1,63 @@
 ---
 title: "Flutter SDK quickstart"
-description: "Create persistent mobile visitor continuity and run customer-owned email or phone verification."
+description: "Create a persistent mobile visitor and send it to your backend."
 ---
 
-`era_flutter` creates a partner-scoped visitor ID in your Flutter app and calls
-Era's public verification endpoints. Use it for customer-owned email and phone
-verification UI.
+`era_flutter` creates and stores a `visitorId`. Your backend sends that ID and
+the conversation to Era with the Node SDK.
 
 <Warning>
-  A Flutter app must never contain a secret Era API key or call `/v1/era/turn`.
-  Send `visitorId` to your trusted backend, where the Server SDK uses the secret key.
+  Never put a secret Node SDK API key in your Flutter app.
 </Warning>
 
-## Install and initialize
+<Steps>
+  <Step title="Install">
+    Add the package to `pubspec.yaml`:
 
-Add the SDK to `pubspec.yaml`:
+    ```yaml
+    dependencies:
+      era_flutter: ^0.1.0
+    ```
+  </Step>
 
-```yaml
-dependencies:
-  era_flutter: ^0.1.0
-```
+  <Step title="Create the client">
+    ```dart
+    import 'package:era_flutter/era_flutter.dart';
 
-Initialize it with a publishable key from the Era Dashboard:
+    final era = EraFlutter(
+      baseUrl: 'https://your-era-endpoint.com',
+      publishableKey: 'your_publishable_key',
+    );
+    ```
 
-```dart
-import 'package:era_flutter/era_flutter.dart';
+    A publishable key can be included in the app.
+  </Step>
 
-final era = EraFlutter(
-  baseUrl: 'https://your-era-endpoint.com',
-  publishableKey:
-      'pk_era.<raw-lowercase-partner-uuid>.<raw-lowercase-key-uuid>.<43-character-url-safe-secret>',
-);
+  <Step title="Initialize the visitor">
+    ```dart
+    final visitorId = await era.init();
+    ```
 
-final visitorId = await era.init();
-```
+    The SDK reuses the visitor across app launches when preferences are
+    available.
+  </Step>
 
-The partner ID and key ID in the publishable key are raw lowercase UUIDs. They
-are not Base64url-encoded. The 43-character secret remains URL-safe random
-material.
+  <Step title="Send the visitor to your backend">
+    Include `visitorId` with every chat request. Your trusted backend passes it
+    to the Node SDK:
 
-## Visitor persistence and reset
+    ```typescript
+    const eraContext = await era.turnContext(messages, {
+      visitorId,
+      sessionId,
+    });
+    ```
+  </Step>
+</Steps>
 
-The SDK persists only the visitor ID with `SharedPreferencesAsync` under:
+## Verify email or phone
 
-```text
-era:visitor_id:<partnerId>
-```
-
-Instances for the same partner in one isolate share that state. When
-preferences are unavailable, the SDK keeps the visitor ID in memory for the
-current isolate. Call `resetVisitor()` on logout, account switching, or a
-shared-device user change:
-
-```dart
-await era.resetVisitor();
-```
-
-Reset aborts requests from the prior visitor generation. An operation that
-races reset fails with `EraFlutterException(code: 'visitor_reset', ...)` and
-should be restarted from the app's current UI state.
-
-## Verification UI belongs to your app
+Your app owns the verification UI:
 
 ```dart
 final challenge = await era.startVerification(
@@ -68,22 +65,44 @@ final challenge = await era.startVerification(
   'person@example.com',
 );
 
-// Keep these values only in temporary app UI state.
-final result = await era.confirmVerification(challenge.challengeId, enteredCode);
+final result = await era.confirmVerification(
+  challenge.challengeId,
+  enteredCode,
+);
 ```
 
-The SDK never persists challenge IDs, one-time codes, Era end-user IDs, or
-verification details. Your app owns this temporary verification UI state and
-must discard it when the flow ends. `eraEndUserId` is a continuity hint, not an
-authentication assertion.
+Use `VerificationType.phone` with an E.164 phone number. Use
+`resendVerification()` only after a user action.
 
-Use `VerificationType.phone` with an E.164 phone number for SMS verification.
-Use `resendVerification()` only after a user action. The SDK does not retry
-requests automatically. API and network failures throw `EraFlutterException`,
-which includes `code`, `message`, `retryable`, and `statusCode`.
+The SDK does not store codes or challenge details. Keep them only in temporary
+UI state. `eraEndUserId` is a continuity hint, not proof that the user is
+authenticated in your app.
 
-## Send the visitor ID to your backend
+## Reset and close
 
-Include `visitorId` with the app's chat request. Your trusted backend passes it
-to `turnContext()` using the Server SDK and its secret API key.
+Reset the visitor after logout, account switching, or a shared-device user
+change:
 
+```dart
+final replacementVisitorId = await era.resetVisitor();
+```
+
+Call `close()` when you are finished with the client:
+
+```dart
+era.close();
+```
+
+API and network failures throw `EraFlutterException`. Inspect `code`,
+`message`, `retryable`, and `statusCode`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Identity lifecycle" icon="fingerprint" href="/flutter-sdk/identity">
+    Learn about verification, reset, and cleanup.
+  </Card>
+  <Card title="Flutter SDK reference" icon="code" href="/flutter-sdk/reference">
+    See every client method and option.
+  </Card>
+</CardGroup>

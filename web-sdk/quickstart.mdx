@@ -1,99 +1,86 @@
 ---
 title: "Web SDK quickstart"
-description: "Install the Era Web SDK beta and create a persistent browser visitor."
+description: "Create a persistent browser visitor and send it to your backend."
 ---
 
-<Badge color="purple">Beta</Badge>
+The Web SDK creates and stores a `visitorId`. Your backend sends that ID and
+the conversation to Era with the Node SDK.
 
-The Era Web SDK creates a partner-scoped visitor ID in the browser. It also supports email and phone verification. Use the Server SDK from your trusted backend to request cognitive context.
+<Steps>
+  <Step title="Install">
+    ```bash
+    npm install @season/era-web
+    ```
+  </Step>
 
-<Warning>
-  The Web SDK is a beta release. Origin allowlists, rate limits, OTP budgets, and broader abuse controls are deferred. Review your browser exposure before using it in production.
-</Warning>
+  <Step title="Create the browser client">
+    ```typescript
+    import { EraWeb } from "@season/era-web";
 
-## Install from npm
+    const eraWeb = new EraWeb({
+      baseUrl: "https://your-era-endpoint.com",
+      publishableKey: "your_publishable_key",
+    });
+    ```
 
-```bash
-npm install @season/era-web
-```
+    A publishable key is safe to include in browser code. Never include the
+    secret Node SDK API key.
+  </Step>
+
+  <Step title="Initialize the visitor">
+    ```typescript
+    const visitorId = await eraWeb.init();
+    ```
+
+    The SDK reuses the same visitor across page loads when browser storage is
+    available.
+  </Step>
+
+  <Step title="Send the visitor to your backend">
+    ```typescript
+    await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, visitorId, sessionId }),
+    });
+    ```
+  </Step>
+</Steps>
+
+Your backend passes `visitorId` to the Node SDK:
 
 ```typescript
-import { EraWeb } from "@season/era-web";
-
-const eraWeb = new EraWeb({
-  baseUrl: "https://your-era-endpoint.com",
-  publishableKey: "pk_era.<raw-lowercase-partner-uuid>.<raw-lowercase-key-uuid>.<43-character-url-safe-secret>",
-});
-
-const visitorId = await eraWeb.init();
-```
-
-Use a publishable key in browser code. Its partner ID and key ID are raw,
-lowercase UUIDs; they are not Base64url-encoded. Never put your Server SDK API
-key in a browser bundle or call `/v1/era/turn` from the browser.
-
-## Load from a CDN
-
-Pin the package version so a future release cannot change your integration without review.
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/@season/era-web/dist/index.global.min.js"></script>
-<script>
-  const eraWeb = new EraWebSDK.EraWeb({
-    baseUrl: "https://your-era-endpoint.com",
-    publishableKey: "pk_era.<raw-lowercase-partner-uuid>.<raw-lowercase-key-uuid>.<43-character-url-safe-secret>",
-  });
-
-  eraWeb.init().then((visitorId) => {
-    console.log(visitorId);
-  });
-</script>
-```
-
-The browser global also exports `EraWebSDK.EraWebError`.
-
-## Forward identity to your backend
-
-Send the `visitorId` with the conversation. Treat it as a continuity identifier, not an authentication credential.
-
-```typescript Browser
-const visitorId = await eraWeb.init();
-
-const response = await fetch("/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ messages, visitorId, sessionId }),
-});
-```
-
-Your trusted backend uses `@season/era-sdk` and a secret API key.
-
-```typescript Trusted backend
-import { Era } from "@season/era-sdk";
-
-const era = new Era({
-  apiKey: process.env.ERA_API_KEY!,
-  baseUrl: process.env.ERA_URL!,
-  partnerId: process.env.ERA_PARTNER_ID!,
-});
-
-const block = await era.turnContext(messages, {
+const eraContext = await era.turnContext(messages, {
   visitorId,
   sessionId,
 });
-
-const systemPrompt = `You are a helpful assistant.\n\n${block}`;
 ```
 
-When your backend has authenticated the user, add your stable `partnerEndUserId`. You can also provide trusted `email` or `phone` assertions from the backend. Do not trust identity assertions copied directly from browser input.
+Treat `visitorId` as a continuity ID, not as proof that the user is signed in.
+
+## Use a CDN
+
+Pin a package version:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@season/era-web@VERSION/dist/index.global.min.js"></script>
+<script>
+  const eraWeb = new EraWebSDK.EraWeb({
+    baseUrl: "https://your-era-endpoint.com",
+    publishableKey: "your_publishable_key",
+  });
+
+  eraWeb.init().then((visitorId) => console.log(visitorId));
+</script>
+```
 
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="Identity lifecycle" icon="fingerprint" href="/web-sdk/identity">
-    Understand storage, verification, reset, and cross-tab synchronization.
+    Learn about verification and reset.
   </Card>
-  <Card title="API and errors" icon="code" href="/web-sdk/reference">
-    Review every method, exported type, and error field.
+  <Card title="Web SDK reference" icon="code" href="/web-sdk/reference">
+    See every client method and option.
   </Card>
 </CardGroup>

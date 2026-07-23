@@ -22,6 +22,12 @@
             ]
           },
           {
+            "group": "API reference",
+            "pages": [
+              "api-reference"
+            ]
+          },
+          {
             "group": "Use cases",
             "pages": [
               "use-cases/fan-companion",
@@ -31,7 +37,7 @@
         ]
       },
       {
-        "tab": "Server SDK",
+        "tab": "Node SDK",
         "groups": [
           {
             "group": "Get started",
@@ -67,11 +73,23 @@
         "tab": "Web SDK",
         "groups": [
           {
-            "group": "Web SDK beta",
+            "group": "Get started",
             "pages": [
-              "web-sdk/quickstart",
-              "web-sdk/identity",
-              "web-sdk/reference"
+              "web-sdk/quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "web-sdk/identity"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "web-sdk/reference",
+              "web-sdk/types",
+              "web-sdk/errors"
             ]
           }
         ]
@@ -80,9 +98,23 @@
         "tab": "Flutter SDK",
         "groups": [
           {
-            "group": "Flutter SDK",
+            "group": "Get started",
             "pages": [
               "flutter-sdk/quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "flutter-sdk/identity"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "flutter-sdk/reference",
+              "flutter-sdk/types",
+              "flutter-sdk/errors"
             ]
           }
         ]

@@ -1,0 +1,153 @@
+---
+title: "EraFlutter client"
+description: "Create the Flutter SDK client and manage a mobile visitor."
+---
+
+## Create a client
+
+```dart
+import 'package:era_flutter/era_flutter.dart';
+
+final era = EraFlutter(
+  baseUrl: 'https://your-era-endpoint.com',
+  publishableKey: 'your_publishable_key',
+);
+```
+
+<ParamField path="baseUrl" type="String" required>
+  Base URL of the Era service.
+</ParamField>
+
+<ParamField path="publishableKey" type="String" required>
+  Publishable key for mobile identity and verification requests.
+</ParamField>
+
+<ParamField path="httpClient" type="http.Client">
+  Custom HTTP client. The SDK creates one when omitted.
+</ParamField>
+
+<ParamField path="ownsHttpClient" type="bool" default="false">
+  Close the supplied `httpClient` when `close()` is called.
+</ParamField>
+
+<ParamField path="storage" type="EraFlutterStorage">
+  Custom visitor storage. The default uses `SharedPreferencesAsync`.
+</ParamField>
+
+See [all Flutter SDK types](/flutter-sdk/types).
+
+## `init([visitorId])`
+
+Loads the stored visitor or creates one.
+
+```dart
+Future<String> init([String? visitorId])
+```
+
+Pass a lowercase UUIDv4 when your application already has a visitor UUID:
+
+```dart
+final visitorId = await era.init(
+  '22222222-2222-4222-8222-222222222222',
+);
+// era_vid_22222222-2222-4222-8222-222222222222
+```
+
+## `getVisitorId()`
+
+Reads the current visitor without creating one.
+
+```dart
+Future<String?> getVisitorId()
+```
+
+Returns the stored or in-memory visitor, or `null` when none exists.
+
+## `getVerification()`
+
+Checks whether the current visitor is linked to an Era end user.
+
+```dart
+Future<VerificationStatus> getVerification()
+```
+
+```dart
+final status = await era.getVerification();
+print(status.eraEndUserId);
+```
+
+`eraEndUserId` is an opaque Era ID or `null`.
+
+## `startVerification(type, identifier)`
+
+Sends an email or phone verification code.
+
+```dart
+Future<VerificationChallenge> startVerification(
+  VerificationType type,
+  String identifier,
+)
+```
+
+```dart
+final challenge = await era.startVerification(
+  VerificationType.email,
+  'person@example.com',
+);
+```
+
+## `confirmVerification(challengeId, code)`
+
+Confirms a code and links the current visitor.
+
+```dart
+Future<VerificationConfirmation> confirmVerification(
+  String challengeId,
+  String code,
+)
+```
+
+```dart
+final result = await era.confirmVerification(
+  challenge.challengeId,
+  enteredCode,
+);
+
+print(result.verified);     // true
+print(result.eraEndUserId); // opaque Era ID
+```
+
+## `resendVerification(challengeId)`
+
+Sends another code.
+
+```dart
+Future<VerificationChallenge> resendVerification(
+  String challengeId,
+)
+```
+
+Use the returned challenge for later confirm or resend calls.
+
+## `resetVisitor()`
+
+Replaces the current visitor and returns the new ID.
+
+```dart
+Future<String> resetVisitor()
+```
+
+Use this after logout, account switching, or a shared-device user change.
+
+## `close()`
+
+Aborts this client's requests and closes its owned HTTP client.
+
+```dart
+void close()
+```
+
+Calling `close()` more than once has no effect. Other methods throw
+`client_closed` after the client is closed.
+
+See [Flutter SDK errors](/flutter-sdk/errors).

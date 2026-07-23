@@ -1,26 +1,28 @@
 ---
-title: "Setup SDKs"
-description: "Use a client SDK for visitor continuity and the Server SDK for cognitive context."
+title: "Choose an SDK"
+description: "Pick the Era SDKs that match where your application runs."
 ---
 
-Era provides three SDKs with different trust boundaries.
+Most applications use two SDKs:
 
-| SDK | Use it for | Credential | Package |
+1. A client SDK creates a stable `visitorId`.
+2. The Node SDK sends the conversation to Era and returns a context block.
+
+## SDK comparison
+
+| Your code runs in | Package | Use it for | Key type |
 | --- | --- | --- | --- |
-| **Web SDK (beta)** | Create a browser visitor ID and verify an email address or phone number | Publishable key | `@season/era-web` |
-| **Flutter SDK** | Create a mobile visitor ID and verify an email address or phone number | Publishable key | `era_flutter` |
-| **Server SDK** | Send conversations to Era and receive cognitive context | Secret API key | `@season/era-sdk` |
+| Browser | `@season/era-web` | Create a visitor ID and verify email or phone | Publishable |
+| Flutter app | `era_flutter` | Create a visitor ID and verify email or phone | Publishable |
+| Trusted backend | `@season/era-sdk` | Get the context block for a conversation | Secret |
 
 <Warning>
-  Never expose a Server SDK secret API key in browser or mobile code. Client SDKs do not call `/v1/era/turn`.
+  Never put a Node SDK API key in browser or mobile code.
 </Warning>
 
-## Typical integration
+## Browser application
 
-1. Initialize the Web SDK in the browser or the Flutter SDK in your mobile app.
-2. Send its `visitorId` to your trusted backend with each chat request.
-3. Pass `visitorId` to `turnContext()` on the backend.
-4. Once your application knows the signed-in user, also pass your stable `partnerEndUserId` from the backend.
+Use the Web SDK in the browser and the Node SDK on your backend.
 
 ```typescript Browser
 const visitorId = await eraWeb.init();
@@ -33,14 +35,33 @@ await fetch("/api/chat", {
 ```
 
 ```typescript Trusted backend
-import { Era } from "@season/era-sdk";
-
-const era = new Era({
-  apiKey: process.env.ERA_API_KEY!,
-  baseUrl: process.env.ERA_URL!,
-  partnerId: process.env.ERA_PARTNER_ID!,
+const block = await era.turnContext(messages, {
+  visitorId,
+  sessionId,
 });
+```
 
+## Flutter application
+
+Use `era_flutter` in the app and the Node SDK on your backend.
+
+```dart Flutter
+final visitorId = await era.init();
+```
+
+Send `visitorId` with the chat request. Your backend uses it in the same
+`turnContext()` call shown above.
+
+## Backend-only application
+
+The Node SDK still needs a stable `visitorId`. Create and store one for each
+user or visitor, then pass it on every turn.
+
+## Signed-in users
+
+When your backend knows the signed-in user, add your own stable user ID:
+
+```typescript
 const block = await era.turnContext(messages, {
   visitorId,
   partnerEndUserId: authenticatedUser.id,
@@ -48,14 +69,18 @@ const block = await era.turnContext(messages, {
 });
 ```
 
+`partnerEndUserId` adds trusted account identity, but it does not replace
+`visitorId`. Only send email or phone assertions that your backend has already
+verified.
+
 <CardGroup cols={3}>
-  <Card title="Server SDK quickstart" icon="server" href="/quickstart">
-    Add cognitive context from your trusted backend.
+  <Card title="Node SDK quickstart" icon="server" href="/quickstart">
+    Request your first context block.
   </Card>
   <Card title="Web SDK quickstart" icon="browser" href="/web-sdk/quickstart">
-    Add browser visitor continuity and verification.
+    Create a browser visitor.
   </Card>
   <Card title="Flutter SDK quickstart" icon="mobile" href="/flutter-sdk/quickstart">
-    Add mobile visitor continuity and verification.
+    Create a mobile visitor.
   </Card>
 </CardGroup>

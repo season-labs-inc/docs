@@ -1,0 +1,78 @@
+---
+title: "Flutter SDK types"
+description: "Verification models and storage interfaces exported by the Flutter SDK."
+---
+
+## VerificationType
+
+```dart
+enum VerificationType {
+  email,
+  phone;
+
+  String get wireValue => name;
+}
+```
+
+Use `VerificationType.email` with an email address. Use
+`VerificationType.phone` with an E.164 phone number.
+
+## VerificationChallenge
+
+Returned by `startVerification()` and `resendVerification()`.
+
+```dart
+class VerificationChallenge {
+  final String challengeId;
+  final String maskedIdentifier;
+  final String expiresAt;
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `challengeId` | Opaque ID used to confirm or resend the challenge |
+| `maskedIdentifier` | Safe email address or phone number to show in the UI |
+| `expiresAt` | Challenge expiry returned by Era |
+
+## VerificationStatus
+
+Returned by `getVerification()`.
+
+```dart
+class VerificationStatus {
+  final String? eraEndUserId;
+}
+```
+
+`eraEndUserId` is an opaque continuity ID. Do not use it to authorize access.
+
+## VerificationConfirmation
+
+Returned by `confirmVerification()`.
+
+```dart
+class VerificationConfirmation {
+  final bool verified = true;
+  final String eraEndUserId;
+}
+```
+
+A successful confirmation proves control of the email address or phone number.
+It does not sign the user in to your application.
+
+## EraFlutterStorage
+
+Implement this interface to replace the default `SharedPreferencesAsync`
+visitor storage.
+
+```dart
+abstract interface class EraFlutterStorage {
+  Future<String?> getString(String key);
+  Future<void> setString(String key, String value);
+  Future<void> remove(String key);
+}
+```
+
+The SDK stores only the visitor ID. Challenge IDs, verification codes, and Era
+end-user IDs remain the responsibility of your UI.
