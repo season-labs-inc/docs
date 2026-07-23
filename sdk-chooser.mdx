@@ -1,22 +1,23 @@
 ---
 title: "Setup SDKs"
-description: "Use the Web SDK for browser identity and the Server SDK for cognitive context."
+description: "Use a client SDK for visitor continuity and the Server SDK for cognitive context."
 ---
 
-Era provides two SDKs with different trust boundaries.
+Era provides three SDKs with different trust boundaries.
 
 | SDK | Use it for | Credential | Package |
 | --- | --- | --- | --- |
 | **Web SDK (beta)** | Create a browser visitor ID and verify an email address or phone number | Publishable key | `@season/era-web` |
+| **Flutter SDK** | Create a mobile visitor ID and verify an email address or phone number | Publishable key | `era_flutter` |
 | **Server SDK** | Send conversations to Era and receive cognitive context | Secret API key | `@season/era-sdk` |
 
 <Warning>
-  Never expose a Server SDK secret API key in browser code. The Web SDK does not call `turnContext()`.
+  Never expose a Server SDK secret API key in browser or mobile code. Client SDKs do not call `/v1/era/turn`.
 </Warning>
 
 ## Typical integration
 
-1. Initialize the Web SDK in the browser.
+1. Initialize the Web SDK in the browser or the Flutter SDK in your mobile app.
 2. Send its `visitorId` to your trusted backend with each chat request.
 3. Pass `visitorId` to `turnContext()` on the backend.
 4. Once your application knows the signed-in user, also pass your stable `partnerEndUserId` from the backend.
@@ -47,11 +48,14 @@ const block = await era.turnContext(messages, {
 });
 ```
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Server SDK quickstart" icon="server" href="/quickstart">
     Add cognitive context from your trusted backend.
   </Card>
   <Card title="Web SDK quickstart" icon="browser" href="/web-sdk/quickstart">
     Add browser visitor continuity and verification.
+  </Card>
+  <Card title="Flutter SDK quickstart" icon="mobile" href="/flutter-sdk/quickstart">
+    Add mobile visitor continuity and verification.
   </Card>
 </CardGroup>

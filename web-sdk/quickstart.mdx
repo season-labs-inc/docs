@@ -22,13 +22,15 @@ import { EraWeb } from "@season/era-web";
 
 const eraWeb = new EraWeb({
   baseUrl: "https://your-era-endpoint.com",
-  publishableKey: "pk_era.your_partner.your_key_id.your_key",
+  publishableKey: "pk_era.<raw-lowercase-partner-uuid>.<raw-lowercase-key-uuid>.<43-character-url-safe-secret>",
 });
 
 const visitorId = await eraWeb.init();
 ```
 
-Use a publishable key in browser code. Never put your Server SDK API key in a browser bundle.
+Use a publishable key in browser code. Its partner ID and key ID are raw,
+lowercase UUIDs; they are not Base64url-encoded. Never put your Server SDK API
+key in a browser bundle or call `/v1/era/turn` from the browser.
 
 ## Load from a CDN
 
@@ -39,7 +41,7 @@ Pin the package version so a future release cannot change your integration witho
 <script>
   const eraWeb = new EraWebSDK.EraWeb({
     baseUrl: "https://your-era-endpoint.com",
-    publishableKey: "pk_era.your_partner.your_key_id.your_key",
+    publishableKey: "pk_era.<raw-lowercase-partner-uuid>.<raw-lowercase-key-uuid>.<43-character-url-safe-secret>",
   });
 
   eraWeb.init().then((visitorId) => {

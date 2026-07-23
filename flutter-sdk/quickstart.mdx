@@ -1,0 +1,89 @@
+---
+title: "Flutter SDK quickstart"
+description: "Create persistent mobile visitor continuity and run customer-owned email or phone verification."
+---
+
+`era_flutter` creates a partner-scoped visitor ID in your Flutter app and calls
+Era's public verification endpoints. Use it for customer-owned email and phone
+verification UI.
+
+<Warning>
+  A Flutter app must never contain a secret Era API key or call `/v1/era/turn`.
+  Send `visitorId` to your trusted backend, where the Server SDK uses the secret key.
+</Warning>
+
+## Install and initialize
+
+Add the SDK to `pubspec.yaml`:
+
+```yaml
+dependencies:
+  era_flutter: ^0.1.0
+```
+
+Initialize it with a publishable key from the Era Dashboard:
+
+```dart
+import 'package:era_flutter/era_flutter.dart';
+
+final era = EraFlutter(
+  baseUrl: 'https://your-era-endpoint.com',
+  publishableKey:
+      'pk_era.<raw-lowercase-partner-uuid>.<raw-lowercase-key-uuid>.<43-character-url-safe-secret>',
+);
+
+final visitorId = await era.init();
+```
+
+The partner ID and key ID in the publishable key are raw lowercase UUIDs. They
+are not Base64url-encoded. The 43-character secret remains URL-safe random
+material.
+
+## Visitor persistence and reset
+
+The SDK persists only the visitor ID with `SharedPreferencesAsync` under:
+
+```text
+era:visitor_id:<partnerId>
+```
+
+Instances for the same partner in one isolate share that state. When
+preferences are unavailable, the SDK keeps the visitor ID in memory for the
+current isolate. Call `resetVisitor()` on logout, account switching, or a
+shared-device user change:
+
+```dart
+await era.resetVisitor();
+```
+
+Reset aborts requests from the prior visitor generation. An operation that
+races reset fails with `EraFlutterException(code: 'visitor_reset', ...)` and
+should be restarted from the app's current UI state.
+
+## Verification UI belongs to your app
+
+```dart
+final challenge = await era.startVerification(
+  VerificationType.email,
+  'person@example.com',
+);
+
+// Keep these values only in temporary app UI state.
+final result = await era.confirmVerification(challenge.challengeId, enteredCode);
+```
+
+The SDK never persists challenge IDs, one-time codes, Era end-user IDs, or
+verification details. Your app owns this temporary verification UI state and
+must discard it when the flow ends. `eraEndUserId` is a continuity hint, not an
+authentication assertion.
+
+Use `VerificationType.phone` with an E.164 phone number for SMS verification.
+Use `resendVerification()` only after a user action. The SDK does not retry
+requests automatically. API and network failures throw `EraFlutterException`,
+which includes `code`, `message`, `retryable`, and `statusCode`.
+
+## Send the visitor ID to your backend
+
+Include `visitorId` with the app's chat request. Your trusted backend passes it
+to `turnContext()` using the Server SDK and its secret API key.
+

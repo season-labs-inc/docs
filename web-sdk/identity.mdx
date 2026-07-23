@@ -28,6 +28,12 @@ The SDK stores the visitor under a partner-scoped `localStorage` key:
 era:visitor_id:<partnerId>
 ```
 
+The publishable key uses raw lowercase UUIDs for both IDs:
+
+```text
+pk_era.<raw-lowercase-partner-uuid>.<raw-lowercase-key-uuid>.<43-character-url-safe-secret>
+```
+
 The visitor ID:
 
 - Identifies browser continuity for one Era partner.
