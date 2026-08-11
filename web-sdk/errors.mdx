@@ -1,0 +1,62 @@
+---
+title: "Web SDK errors"
+description: "Handle EraWebError failures in browser identity and verification flows."
+---
+
+Web SDK requests reject with `EraWebError`.
+
+```typescript
+import { EraWebError } from "@season/era-web";
+
+try {
+  await eraWeb.startVerification("email", email);
+} catch (error) {
+  if (error instanceof EraWebError) {
+    console.error(error.code, error.message);
+
+    if (error.retryable) {
+      // Let the user retry.
+    }
+  }
+}
+```
+
+## Fields
+
+```typescript
+class EraWebError extends Error {
+  readonly code: string;
+  readonly retryable: boolean;
+  readonly status: number | null;
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `code` | Stable machine-readable error code |
+| `message` | Safe description of the failure |
+| `retryable` | Whether trying the operation again can succeed |
+| `status` | HTTP status, or `null` for a local failure |
+
+## Local error codes
+
+| Code | Meaning | Retryable |
+| --- | --- | --- |
+| `visitor_reset` | The visitor changed during the operation | No |
+| `network_error` | The browser could not reach Era | Yes |
+| `invalid_response` | Era returned an unexpected success response | No |
+| `request_failed` | The API returned an error without a specific code | Depends on status |
+
+The API can return more specific validation codes.
+
+Invalid publishable keys and visitor IDs throw `Error` before a request is
+made.
+
+## Retry behavior
+
+The Web SDK does not retry requests automatically. Retry only after a user
+action and only when `retryable` is `true`. In particular, do not resend
+verification codes in a background loop.
+
+If an operation fails with `visitor_reset`, restart the flow for the new
+visitor instead of reusing the previous challenge.

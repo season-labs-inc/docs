@@ -1,73 +1,88 @@
 ---
 title: "Introduction"
-description: "The shared user cognitive layer for your agent fleet, updated on every turn."
+description: "Give your AI agent a clear, live summary of what the user needs."
 ---
 
 ## What is Era?
 
-Era gives your AI agent a live read on the user. Once per turn, you call `turnContext()` and get back a short text block. You append it to your system prompt. That's the whole integration.
+Era turns a conversation into a short context block for your AI agent. The
+block summarizes the user's current goal, intent, urgency, and recommended next
+step.
 
-The block looks like this:
+Call `turnContext()` before each model response, then add the returned string to
+your system prompt:
 
-```
-[STATE v1] urgency=immediate knowledge=uncertain_about_qualifying_format [/STATE]
-[GOAL v1] active=seek:confirm_if_qualifying_already_happened resolved=unresolved [/GOAL]
-[INTENT v1] intent=validating(0.95) specificity=specific journey=[exploring,learning,validating] [/INTENT]
-[CAUSAL v1] trigger=fear_of_missing_session emotion=anxious need_level=safety [/CAUSAL]
-[REC v1] action=validate do="Confirm immediately whether they missed qualifying" priority=0.85 [/REC]
-```
+```typescript
+const eraContext = await era.turnContext(messages, {
+  visitorId,
+  sessionId,
+});
 
-With this in its prompt, your agent stops guessing. It knows the user is anxious, knows what they're really asking, and knows what to do — before it writes a word. [See a real conversation with and without it](/use-cases/fan-companion).
-
-Era is not a memory system. Memory stores facts about a user — "has a dog named Rex." Era reads the conversation as it happens and tells your agent what the user wants *right now*. If you already use a memory layer, keep it; the two work side by side.
-
-## Core concepts
-
-| Concept | Description |
-| --- | --- |
-| **Block** | The text Era returns each turn. You append it to your system prompt. |
-| **Signals** | What Era reads from the conversation: intent, goal, urgency, emotion, values. |
-| **Recommendation** | The `[REC]` line — what Era suggests your agent do on this turn. |
-| **Modes** | `async` (default) returns the previous turn's precomputed block after a short API call. `sync` waits for a fresh one. |
-
-## How does it work
-
-```
-User message
-     │
-     ▼
-era.turnContext(messages)   ←── Era service (previous block in async mode)
-     │
-     ▼
-Inject block into system prompt
-     │
-     ▼
-LLM call  →  Response to user
+const systemPrompt = `You are a helpful assistant.\n\n${eraContext}`;
 ```
 
-1. **Your user sends a message.** Your app receives it as usual.
-2. **You call `era.turnContext(messages)`.** In async mode the API returns the block computed from the previous turn without waiting for the current extraction pipeline.
-3. **You append the block to your system prompt** and call your LLM exactly as you do today.
-4. **Era reads the new turn in the background** and updates the user's signals for the next call.
+The rest of your model call stays the same.
 
-If Era is unreachable, expected service failures return an empty string and your agent continues without an Era block. The SDK has no runtime dependencies, and the same block format works for support, sales, and companion agents — there is no per-vertical setup.
+## What Era returns
+
+`turnContext()` returns a plain string:
+
+```text
+[STATE v1] urgency=immediate [/STATE]
+[GOAL v1] active=seek:confirm_qualifying_time resolved=unresolved [/GOAL]
+[INTENT v1] intent=validating(0.95) specificity=specific [/INTENT]
+[CAUSAL v1] emotion=anxious need_level=safety [/CAUSAL]
+[REC v1] action=validate do="Confirm whether qualifying has happened" priority=0.85 [/REC]
+```
+
+Your model uses that block as internal context. Do not show it to the user.
+
+## How one turn works
+
+1. Your user sends a message.
+2. Your backend calls `turnContext()` with the conversation and visitor ID.
+3. Era returns a context block.
+4. You add the block to the system prompt and call your model.
+5. Your model responds with a better read on what the user needs.
+
+In the default `async` mode, Era returns the previous turn's prepared block.
+Use `sync` mode when you need context for the current turn and can accept more
+latency. [Compare async and sync mode](/concepts/async-sync).
+
+## What Era is not
+
+Era is not a replacement for conversation history or long-term memory.
+
+- **Conversation history** gives the model the exact messages.
+- **Memory** stores durable facts, such as a user's preferences.
+- **Era** summarizes what the user is trying to do right now.
+
+You can use all three together.
+
+## Which SDK do I need?
+
+| Where your code runs | SDK | What it does |
+| --- | --- | --- |
+| Trusted backend | `@season/era-sdk` | Returns the context block. |
+| Browser | `@season/era-web` | Creates a visitor ID and verifies email or phone. |
+| Flutter app | `era_flutter` | Creates a visitor ID and verifies email or phone. |
+
+The secret Node SDK API key must stay on your backend. The Web and Flutter
+SDKs use publishable keys.
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="See it work" icon="wand-magic-sparkles" href="/use-cases/fan-companion">
-    A live before/after: the same fan question answered with and without Era.
-  </Card>
-  <Card title="Quickstart" icon="rocket" href="/quickstart">
-    Add the Server SDK and make your first `turnContext` call.
+  <Card title="Node SDK quickstart" icon="rocket" href="/quickstart">
+    Make your first Node SDK call.
   </Card>
   <Card title="Setup SDKs" icon="code-branch" href="/sdk-chooser">
-    Compare the browser and trusted-backend integrations.
+    Choose the SDKs for your application.
   </Card>
-  <Card title="Async vs Sync" icon="arrows-left-right" href="/concepts/async-sync">
-    Understand the two operating modes before going to production.
+  <Card title="All SDK methods" icon="brackets-curly" href="/api-reference">
+    Find every public method and function.
   </Card>
-  <Card title="Vercel AI SDK" icon="puzzle-piece" href="/integrations/vercel-ai-sdk">
-    Auto-inject context with a one-line middleware wrapper.
+  <Card title="See an example" icon="wand-magic-sparkles" href="/use-cases/fan-companion">
+    Compare the same conversation with and without Era.
   </Card>
 </CardGroup>

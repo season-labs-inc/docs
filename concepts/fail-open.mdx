@@ -1,81 +1,60 @@
 ---
 title: "Fail-open design"
-description: "Era converts service failures into an empty context block."
+description: "Keep your agent running when Era is unavailable."
 ---
 
-## What fail-open means
-
-`turnContext()` converts expected network and Era API failures into `""` instead of rejecting. Your application can continue without cognitive context for that turn.
+The Node SDK returns an empty string for expected Era service failures. Your
+application can make its model call without Era context.
 
 ```typescript
-const block = await era.turnContext(messages);
-// Era service failures return an empty string.
+const eraContext = await era.turnContext(messages, {
+  visitorId,
+  sessionId,
+});
+
+// An empty string is safe to add to the prompt.
+const systemPrompt = `You are a helpful assistant.\n\n${eraContext}`;
 ```
 
-The fail-open guarantee does not cover programming errors in your application or an invalid SDK constructor option. For example, the constructor throws if `mode` is neither `"async"` nor `"sync"`.
-
-## What errors are caught
+## Behavior by condition
 
 | Error type | Behavior |
-|---|---|
-| Network failure / DNS error | Returns `""`, logs warning |
-| Request timeout | Returns `""`, logs warning |
-| HTTP 5xx | Retries up to `maxRetries`, then returns `""` |
-| HTTP 4xx | Returns `""` immediately (no retry — configuration or usage error) |
-| Invalid JSON response | Returns `""`, logs warning |
-| Last message not from user | Returns `""` silently (not an error — see below) |
+| --- | --- |
+| Network error or timeout | Retry, then return `""` and warn |
+| HTTP 5xx | Retry, then return `""` and warn |
+| HTTP 4xx | Return `""` and warn; do not retry |
+| Invalid response | Retry, then return `""` and warn |
+| No `visitorId` | Return `""` without a request |
+| Conversation does not end with a user message | Return `""` without a request |
 
 ## Retry behavior
 
-Transient failures (timeout, network, 5xx) are retried automatically:
+The default is one retry. Set `maxRetries` to change it:
 
 ```typescript
 const era = new Era({
-  maxRetries: 2,        // default is 1
+  maxRetries: 2,
   timeoutMs: 3000,
 });
 ```
 
-Retries use exponential backoff starting at 100 ms:
-
-```
-attempt 0 → fail → wait 100ms
-attempt 1 → fail → wait 200ms
-attempt 2 → fail → return ""
-```
-
-4xx errors are **not retried**. They indicate a configuration or usage problem, such as a wrong API key, unknown partner ID, or invalid identity assertion, that will not resolve through retrying.
+Only transient failures are retried. A 4xx response usually means the API key,
+partner ID, or request is wrong, so retrying the same request will not help.
 
 ## Logging
 
-Era logs warnings via `console.warn` by default. Pass a custom logger to integrate with pino, winston, or any structured logging system:
+Warnings use `console.warn` by default. Pass your own logger if needed:
 
 ```typescript
-import pino from "pino";
-
-const logger = pino();
-
 const era = new Era({
   logger: {
-    warn: (msg) => logger.warn(msg),
-    info: (msg) => logger.info(msg),
+    warn: (message) => appLogger.warn(message),
+    info: (message) => appLogger.info(message),
   },
 });
 ```
 
-Enable verbose per-turn logging with `debug: true`:
+Set `debug: true` to enable informational logs when you use the default logger.
 
-```typescript
-const era = new Era({ debug: true });
-// logs the injected block and request details on every turn
-```
-
-## Silent no-ops
-
-`turnContext` returns `""` silently (no log, no error) when the last message in the array is not from the user. This is intentional — Era only processes user turns, so calling it after an assistant message is a no-op by design.
-
-```typescript
-// After the assistant responds, messages ends with role: "assistant"
-// No fetch is made — block is "" immediately
-const block = await era.turnContext(messages);
-```
+Fail-open behavior does not hide errors in your own code. For example, the
+`Era` constructor still throws when `mode` is not `"async"` or `"sync"`.

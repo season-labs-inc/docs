@@ -1,0 +1,108 @@
+---
+title: "Flutter SDK quickstart"
+description: "Create a persistent mobile visitor and send it to your backend."
+---
+
+`era_flutter` creates and stores a `visitorId`. Your backend sends that ID and
+the conversation to Era with the Node SDK.
+
+<Warning>
+  Never put a secret Node SDK API key in your Flutter app.
+</Warning>
+
+<Steps>
+  <Step title="Install">
+    Add the package to `pubspec.yaml`:
+
+    ```yaml
+    dependencies:
+      era_flutter: ^0.1.0
+    ```
+  </Step>
+
+  <Step title="Create the client">
+    ```dart
+    import 'package:era_flutter/era_flutter.dart';
+
+    final era = EraFlutter(
+      baseUrl: 'https://your-era-endpoint.com',
+      publishableKey: 'your_publishable_key',
+    );
+    ```
+
+    A publishable key can be included in the app.
+  </Step>
+
+  <Step title="Initialize the visitor">
+    ```dart
+    final visitorId = await era.init();
+    ```
+
+    The SDK reuses the visitor across app launches when preferences are
+    available.
+  </Step>
+
+  <Step title="Send the visitor to your backend">
+    Include `visitorId` with every chat request. Your trusted backend passes it
+    to the Node SDK:
+
+    ```typescript
+    const eraContext = await era.turnContext(messages, {
+      visitorId,
+      sessionId,
+    });
+    ```
+  </Step>
+</Steps>
+
+## Verify email or phone
+
+Your app owns the verification UI:
+
+```dart
+final challenge = await era.startVerification(
+  VerificationType.email,
+  'person@example.com',
+);
+
+final result = await era.confirmVerification(
+  challenge.challengeId,
+  enteredCode,
+);
+```
+
+Use `VerificationType.phone` with an E.164 phone number. Use
+`resendVerification()` only after a user action.
+
+The SDK does not store codes or challenge details. Keep them only in temporary
+UI state. `eraEndUserId` is a continuity hint, not proof that the user is
+authenticated in your app.
+
+## Reset and close
+
+Reset the visitor after logout, account switching, or a shared-device user
+change:
+
+```dart
+final replacementVisitorId = await era.resetVisitor();
+```
+
+Call `close()` when you are finished with the client:
+
+```dart
+era.close();
+```
+
+API and network failures throw `EraFlutterException`. Inspect `code`,
+`message`, `retryable`, and `statusCode`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Identity lifecycle" icon="fingerprint" href="/flutter-sdk/identity">
+    Learn about verification, reset, and cleanup.
+  </Card>
+  <Card title="Flutter SDK reference" icon="code" href="/flutter-sdk/reference">
+    See every client method and option.
+  </Card>
+</CardGroup>

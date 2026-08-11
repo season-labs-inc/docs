@@ -1,0 +1,64 @@
+---
+title: "Flutter SDK errors"
+description: "Handle EraFlutterException failures in mobile identity and verification flows."
+---
+
+Flutter SDK request failures throw `EraFlutterException`.
+
+```dart
+try {
+  await era.startVerification(
+    VerificationType.email,
+    email,
+  );
+} on EraFlutterException catch (error) {
+  print('${error.code}: ${error.message}');
+
+  if (error.retryable) {
+    // Let the user retry.
+  }
+}
+```
+
+## Fields
+
+```dart
+class EraFlutterException implements Exception {
+  final String code;
+  final String message;
+  final bool retryable;
+  final int? statusCode;
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `code` | Stable machine-readable error code |
+| `message` | Safe description of the failure |
+| `retryable` | Whether trying the operation again can succeed |
+| `statusCode` | HTTP status, or `null` for a local failure |
+
+`toString()` returns `EraFlutterException(<code>): <message>`.
+
+## Local error codes
+
+| Code | Meaning | Retryable |
+| --- | --- | --- |
+| `visitor_reset` | The visitor changed during the operation | No |
+| `client_closed` | The client was already closed | No |
+| `network_error` | The app could not reach Era | Yes |
+| `invalid_response` | Era returned an unexpected success response | No |
+| `request_failed` | The API returned an error without a specific code | Depends on status |
+
+The API can return more specific validation codes.
+
+Invalid publishable keys and visitor IDs throw `ArgumentError` before a request
+is made.
+
+## Retry behavior
+
+The Flutter SDK does not retry requests automatically. Retry only after a user
+action and only when `retryable` is `true`.
+
+If an operation fails with `visitor_reset`, restart the flow for the new
+visitor. If it fails with `client_closed`, create a new `EraFlutter` instance.

@@ -1,102 +1,89 @@
 ---
-title: "Identity and session management"
-description: "How Era maintains identity continuity and separates conversations."
+title: "Visitors, users, and sessions"
+description: "Keep one visitor continuous while separating different conversations."
 ---
 
-## Identity inputs
+Era uses three different IDs:
 
-Era requires `visitorId`, `partnerEndUserId`, or both for each `turnContext()` call.
+| ID | Meaning | Required? |
+| --- | --- | --- |
+| `visitorId` | The current browser or mobile visitor | Yes |
+| `partnerEndUserId` | Your ID for a signed-in user | No |
+| `sessionId` | One conversation or chat thread | Recommended |
 
-- `visitorId` maintains continuity for a browser visitor. Obtain it from the [Web SDK](/web-sdk/quickstart).
-- `partnerEndUserId` is your stable identifier for an authenticated user. Supply it only from a trusted backend.
-- Supplying both connects the browser conversation with the partner user identity.
+## Visitor ID
 
-You can set defaults when you create `Era`:
+Create the visitor ID with the [Web SDK](/web-sdk/quickstart) or
+[Flutter SDK](/flutter-sdk/quickstart). Send it to your backend with each chat
+request.
 
 ```typescript
-const era = new Era({
-  apiKey: "...",
-  baseUrl: "...",
-  partnerId: "...",
-  visitorId: "era_vid_00000000-0000-4000-8000-000000000000",
-  sessionId: "session_xyz",
+const eraContext = await era.turnContext(messages, {
+  visitorId,
+  sessionId,
 });
 ```
 
-For a shared server instance, pass identity per call:
+If no `visitorId` is available, `turnContext()` returns `""` without making an
+Era request.
+
+## Signed-in user ID
+
+When your backend knows the signed-in user, add your own stable ID:
 
 ```typescript
-const block = await era.turnContext(messages, {
+const eraContext = await era.turnContext(messages, {
   visitorId,
   partnerEndUserId: authenticatedUser.id,
   sessionId,
 });
 ```
 
-If neither continuity identifier is present, the SDK fails open with `""` and does not make a request or invent an identity.
+This connects the visitor to the account. `partnerEndUserId` does not replace
+`visitorId`.
 
-## Trusted identity bridges
-
-When `partnerEndUserId` is present, your trusted backend can also provide an email address or phone number:
+You can also include a verified `email` or `phone`. These values must come from
+trusted backend data:
 
 ```typescript
-const block = await era.turnContext(messages, {
+const eraContext = await era.turnContext(messages, {
   visitorId,
   partnerEndUserId: authenticatedUser.id,
   email: authenticatedUser.verifiedEmail,
-  phone: authenticatedUser.phone,
   sessionId,
 });
 ```
 
-Bridge assertions must come from data your backend trusts. Do not forward an email address or phone number directly from browser input without validating ownership.
+Never trust an email or phone value copied directly from client input.
 
-## Session IDs
+## Session ID
 
-Use one stable, unique `sessionId` for the lifetime of a conversation. Create a new value when the user starts a new conversation. Do not reuse the same session across unrelated conversations.
+Use the same `sessionId` for every turn in one conversation. Create a new one
+when the user starts a new conversation.
 
-If you omit `sessionId`, the SDK derives one from the first user message with SHA-256. That fallback is deterministic, so two conversations that start with the same text can receive the same derived ID.
+If you omit it, the SDK derives a value from the first user message. Two
+conversations that start with the same text can therefore get the same derived
+value. Pass your application's conversation ID in production.
 
-<Note>
-  For production chat, pass your application's conversation ID as `sessionId`. The derived ID is convenient for simple examples and tests, but it is not a substitute for a unique conversation identifier.
-</Note>
+## Constructor defaults
 
-## Identity-aware memoization
-
-The TypeScript SDK memoizes the latest turn lookup. Its key includes:
-
-- `visitorId`
-- `partnerEndUserId`
-- `email` and `phone`
-- `sessionId`
-- The current one-based `turn_index`
-
-Repeated middleware calls for the same latest turn can share one result. A change to any identity assertion creates a different key, which prevents a cached block from one identity context being reused for another.
+You can set IDs on the client when one client belongs to one visitor:
 
 ```typescript
-const options = { visitorId, partnerEndUserId, sessionId };
-
-const block1 = await era.turnContext(messages, options);
-const block2 = await era.turnContext(messages, options);
-
-// Duplicate calls for the latest turn share the memoized result.
+const era = new Era({
+  apiKey,
+  baseUrl,
+  partnerId,
+  visitorId,
+  sessionId,
+});
 ```
 
-The memoized entry belongs to each `Era` instance. Construct one shared instance for a server process and pass identity and session data per request.
+For a shared server client, pass visitor, user, and session values to each
+`turnContext()` call.
 
-```typescript
-const era = new Era({ apiKey, baseUrl, partnerId });
+## Repeated calls
 
-async function handleTurn(
-  visitorId: string,
-  partnerEndUserId: string | undefined,
-  sessionId: string,
-  messages: Message[],
-) {
-  return era.turnContext(messages, {
-    visitorId,
-    partnerEndUserId,
-    sessionId,
-  });
-}
-```
+The Node SDK memoizes the latest lookup by visitor, signed-in identity,
+session, and turn number. Repeated calls for the same latest turn can share one
+request. Changing any of those values starts a separate lookup.

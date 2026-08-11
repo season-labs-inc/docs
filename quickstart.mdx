@@ -1,33 +1,22 @@
 ---
-title: "Quickstart"
-description: "From zero to cognitive context in under 5 minutes."
+title: "Node SDK quickstart"
+description: "Add Era context to one Node SDK model call."
 ---
 
-## Prerequisites
+This guide adds Era to a trusted Node.js backend. Your browser or mobile app
+should never receive the Node SDK API key.
 
-- Node.js 18 or later
-- An Era API key and partner ID (contact [ayushman@season.team](mailto:ayushman@season.team))
-
-## Get started
+You need Node.js 18 or later, an Era API key, a partner ID, and a `visitorId`
+from the [Web SDK](/web-sdk/quickstart) or [Flutter SDK](/flutter-sdk/quickstart).
 
 <Steps>
-  <Step title="Install the SDK">
+  <Step title="Install">
     ```bash
     npm install @season/era-sdk
     ```
   </Step>
 
-  <Step title="Set your environment variables">
-    ```bash
-    ERA_API_KEY=your_api_key
-    ERA_URL=https://your-era-endpoint.com
-    ERA_PARTNER_ID=your_partner_id
-    ```
-
-    Or export them in your shell / `.env.local` file.
-  </Step>
-
-  <Step title="Initialize the client">
+  <Step title="Create the client">
     ```typescript
     import { Era } from "@season/era-sdk";
 
@@ -38,69 +27,91 @@ description: "From zero to cognitive context in under 5 minutes."
     });
     ```
 
-    You can set identity and session defaults here. For servers that handle multiple users, pass them per call instead.
+    Create one client and reuse it. Keep all three values on your backend.
   </Step>
 
-  <Step title="Inject context before each LLM call">
-    ```typescript
-    // messages is the conversation history so far
-    const block = await era.turnContext(messages, {
-      visitorId: "era_vid_00000000-0000-4000-8000-000000000000",
-      sessionId: "session_xyz",
-    });
+  <Step title="Get context before the model call">
+    Call `turnContext()` after adding the latest user message to `messages`.
 
-    // Append to your system prompt
-    const systemPrompt = `You are a helpful assistant.\n\n${block}`;
+    ```typescript
+    const eraContext = await era.turnContext(messages, {
+      visitorId,
+      sessionId,
+    });
     ```
 
-    `block` is a plain string. Append it wherever your framework expects system context. In async mode, the first turn typically returns `""` because no previous block exists. Network and API failures also fail open with `""`.
+    Use the same `visitorId` for the same visitor. Use the same `sessionId` for
+    every turn in one conversation.
+  </Step>
+
+  <Step title="Add the context to your system prompt">
+    ```typescript
+    const systemPrompt = `You are a helpful assistant.
+
+${eraContext}`;
+    ```
+
+    `eraContext` is a plain string. If it is empty, continue with the model call
+    as usual.
   </Step>
 </Steps>
 
-## Choose the right identity
-
-Every `turnContext()` call needs at least one continuity identifier:
-
-- Pass `visitorId` from `@season/era-web` for browser continuity.
-- Pass `partnerEndUserId` when your trusted backend knows the signed-in user.
-- Pass both while connecting a browser visitor to an authenticated user.
+## Complete example
 
 ```typescript
-const block = await era.turnContext(messages, {
+import { Era } from "@season/era-sdk";
+
+const era = new Era({
+  apiKey: process.env.ERA_API_KEY!,
+  baseUrl: process.env.ERA_URL!,
+  partnerId: process.env.ERA_PARTNER_ID!,
+});
+
+// Run this after the latest user message is in `messages`.
+const eraContext = await era.turnContext(messages, {
+  visitorId: "era_vid_00000000-0000-4000-8000-000000000000",
+  sessionId: "conversation_123",
+});
+
+const result = await yourModel.generate({
+  system: `You are a helpful assistant.\n\n${eraContext}`,
+  messages,
+});
+```
+
+## What to expect
+
+The default mode is `async`:
+
+- The first turn normally returns `""`.
+- Later turns return the previous turn's prepared context.
+- Network and API failures return `""` instead of breaking your chat.
+
+Use `mode: "sync"` if you need context for the current turn and can accept the
+extra latency.
+
+## Add signed-in identity
+
+If your backend knows the signed-in user, include your stable user ID:
+
+```typescript
+const eraContext = await era.turnContext(messages, {
   visitorId,
   partnerEndUserId: authenticatedUser.id,
   sessionId,
 });
 ```
 
-Your backend can also assert a trusted `email` or `phone` alongside `partnerEndUserId`. Never copy these assertions from untrusted browser input without validating them first.
-
-<Warning>
-  Keep `ERA_API_KEY` on your trusted backend. Browser applications should forward `visitorId` to that backend instead of constructing `Era` in the browser.
-</Warning>
-
-## What you get
-
-After the second turn, `block` looks like:
-
-```
-[STATE v1] urgency=time_sensitive knowledge=comparing_plans [/STATE]
-[GOAL v1] active=seek:find_the_right_plan resolved=partial [/GOAL]
-[VALUE v1] top=[cost:high, simplicity:moderate] [/VALUE]
-[INTENT v1] intent=comparing(0.9) specificity=specific journey=[curious,comparing] [/INTENT]
-[CAUSAL v1] trigger=trial_ending_this_week emotion=hopeful need_level=esteem [/CAUSAL]
-[REC v1] action=validate do="Confirm which two plans they are deciding between, then compare directly" priority=0.7 [/REC]
-```
-
-Your model sees this on every turn and answers what the user is actually asking — [here's a live example of the difference it makes](/use-cases/fan-companion).
+You can also send a verified `email` or `phone` with `partnerEndUserId`. Never
+copy those values directly from untrusted client input.
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Async vs Sync modes" icon="arrows-left-right" href="/concepts/async-sync">
-    Pick the right latency/freshness tradeoff for your use case.
+  <Card title="Async and sync modes" icon="arrows-left-right" href="/concepts/async-sync">
+    Choose when Era prepares context.
   </Card>
-  <Card title="Vercel AI SDK integration" icon="puzzle-piece" href="/integrations/vercel-ai-sdk">
-    Auto-inject with `withEra` — no manual string appending.
+  <Card title="Node SDK reference" icon="code" href="/sdk/era-class">
+    See every client method and option.
   </Card>
 </CardGroup>

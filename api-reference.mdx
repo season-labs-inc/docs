@@ -1,0 +1,160 @@
+---
+title: "All SDK methods"
+description: "Every public client method and top-level helper in the Node, Web, and Flutter SDKs."
+---
+
+Use this page to find an SDK method quickly. The examples below show the full
+public callable surface. Follow the links in each section for options, return
+types, and longer examples.
+
+## Node SDK
+
+Package: `@season/era-sdk`
+
+### `new Era(options)`
+
+Creates the Node SDK client.
+
+```typescript
+new Era(options: EraOptions)
+```
+
+[See all constructor options](/sdk/types#eraoptions)
+
+### `era.turnContext(messages, options?)`
+
+Returns the context block to add to your system prompt. The conversation must
+end with a user message, and a `visitorId` must be available on the client or
+the call.
+
+```typescript
+turnContext(
+  messages: EraMessage[],
+  options?: TurnContextOptions,
+): Promise<string>
+```
+
+Expected service failures return `""`, so your agent can continue without Era
+context. [Read the full method reference](/sdk/era-class).
+
+### `messagesToTurns(messages)`
+
+Converts common chat-message objects into the normalized turns sent to Era.
+`turnContext()` already calls this function, so most integrations do not need
+to call it directly.
+
+```typescript
+function messagesToTurns(messages: EraMessage[]): EraTurn[]
+```
+
+[See normalization rules and examples](/sdk/helpers)
+
+## Vercel AI SDK helpers
+
+Package: `@season/era-sdk/ai-sdk`
+
+### `withEra(model, era, options?)`
+
+Wraps a Vercel AI SDK model and adds Era context before every model call.
+
+```typescript
+function withEra(
+  model: LanguageModel,
+  era: Era,
+  options?: TurnContextOptions,
+): LanguageModel
+```
+
+### `eraMiddleware(era, options?)`
+
+Returns the Era middleware when you want to compose it with other Vercel AI SDK
+middleware.
+
+```typescript
+function eraMiddleware(
+  era: Era,
+  options?: TurnContextOptions,
+): LanguageModelMiddleware
+```
+
+[See Vercel AI SDK examples](/integrations/vercel-ai-sdk)
+
+## Web SDK
+
+Package: `@season/era-web`
+
+### `new EraWeb(options)`
+
+Creates a browser client with a publishable key.
+
+```typescript
+new EraWeb(options: EraWebOptions)
+```
+
+### Methods
+
+| Method | Returns | Use it to |
+| --- | --- | --- |
+| `init(visitorId?)` | `Promise<string>` | Load or create the current visitor ID. |
+| `getVisitorId()` | `string \| null` | Read the current visitor ID without creating one. |
+| `getVerification()` | `Promise<VerificationStatus>` | Check whether the visitor is linked to an Era end user. |
+| `startVerification(type, identifier)` | `Promise<VerificationChallenge>` | Send an email or phone verification code. |
+| `confirmVerification(challengeId, code)` | `Promise<VerificationConfirmation>` | Confirm the code and link the visitor. |
+| `resendVerification(challengeId)` | `Promise<VerificationChallenge>` | Send a new code and receive updated challenge details. |
+| `resetVisitor()` | `Promise<string>` | Replace the visitor ID after logout or an account change. |
+
+[See the Web SDK client reference](/web-sdk/reference)
+
+## Flutter SDK
+
+Package: `era_flutter`
+
+### `EraFlutter(...)`
+
+Creates a Flutter client with a publishable key.
+
+```dart
+final era = EraFlutter(
+  baseUrl: baseUrl,
+  publishableKey: publishableKey,
+  httpClient: httpClient,       // optional
+  ownsHttpClient: false,        // optional
+  storage: storage,             // optional
+);
+```
+
+### Methods
+
+| Method | Returns | Use it to |
+| --- | --- | --- |
+| `init([visitorId])` | `Future<String>` | Load or create the current visitor ID. |
+| `getVisitorId()` | `Future<String?>` | Read the current visitor ID without creating one. |
+| `getVerification()` | `Future<VerificationStatus>` | Check whether the visitor is linked to an Era end user. |
+| `startVerification(type, identifier)` | `Future<VerificationChallenge>` | Send an email or phone verification code. |
+| `confirmVerification(challengeId, code)` | `Future<VerificationConfirmation>` | Confirm the code and link the visitor. |
+| `resendVerification(challengeId)` | `Future<VerificationChallenge>` | Send a new code and receive updated challenge details. |
+| `resetVisitor()` | `Future<String>` | Replace the visitor ID after logout or an account change. |
+| `close()` | `void` | Abort this client's requests and close its owned HTTP client. |
+
+The optional `EraFlutterStorage` interface has three methods:
+`getString(key)`, `setString(key, value)`, and `remove(key)`. Implement it only
+when you need storage other than the default `SharedPreferencesAsync`.
+
+Flutter failures throw `EraFlutterException`. It exposes `code`, `message`,
+`retryable`, and `statusCode`, and provides `toString()` for logging.
+
+[See the Flutter SDK client reference](/flutter-sdk/reference)
+
+## Exported values and types
+
+The Node SDK also exports `VERSION`, `EraMode`, `EraLogger`, `EraOptions`,
+`EraMessage`, `EraTurn`, and `TurnContextOptions`. See [Node SDK types](/sdk/types).
+
+The Web SDK exports `EraWebError`, `EraWebOptions`, `VerificationType`,
+`VerificationChallenge`, `VerificationStatus`, and `VerificationConfirmation`.
+See [Web SDK types](/web-sdk/types) and [Web SDK errors](/web-sdk/errors).
+
+The Flutter package exports `EraFlutterException`, `EraFlutterStorage`,
+`VerificationType`, `VerificationChallenge`, `VerificationStatus`, and
+`VerificationConfirmation`. See [Flutter SDK types](/flutter-sdk/types) and
+[Flutter SDK errors](/flutter-sdk/errors).

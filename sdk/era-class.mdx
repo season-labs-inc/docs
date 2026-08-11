@@ -1,52 +1,27 @@
 ---
-title: "Era class"
-description: "Core Server SDK client for fetching cognitive context blocks."
+title: "Era client"
+description: "Create the Node SDK client and request context for each user turn."
 ---
 
-## Constructor
+## Create a client
 
 ```typescript
 import { Era } from "@season/era-sdk";
 
-const era = new Era(options: EraOptions);
-```
-
-See [`EraOptions`](/sdk/types#eraoptions) for the full options reference.
-
-The constructor throws `Error` if `mode` is present but is not `"async"` or `"sync"`.
-
-### Minimal example
-
-```typescript
 const era = new Era({
   apiKey: process.env.ERA_API_KEY!,
   baseUrl: process.env.ERA_URL!,
-  partnerId: "your_partner_id",
+  partnerId: process.env.ERA_PARTNER_ID!,
 });
 ```
 
-### Example with defaults
+The API key is secret. Create this client only on a trusted backend.
 
-```typescript
-const era = new Era({
-  apiKey: process.env.ERA_API_KEY!,
-  baseUrl: process.env.ERA_URL!,
-  partnerId: "your_partner_id",
-  visitorId: "era_vid_00000000-0000-4000-8000-000000000000",
-  sessionId: "session_xyz",
-  mode: "async",
-  brandVoice: "concise and direct",
-  timeoutMs: 2000,
-  maxRetries: 1,
-  debug: true,
-});
-```
-
----
+See [all constructor options](/sdk/types#eraoptions).
 
 ## `turnContext(messages, options?)`
 
-Fetches a cognitive context block for the current turn.
+Returns the context block for a conversation.
 
 ```typescript
 async turnContext(
@@ -55,85 +30,72 @@ async turnContext(
 ): Promise<string>
 ```
 
-### Parameters
+### Arguments
 
 <ParamField path="messages" type="EraMessage[]" required>
-  Full conversation history through the current user message. See [`EraMessage`](/sdk/types#eramessage).
+  Conversation history through the latest user message.
 </ParamField>
 
 <ParamField path="options.visitorId" type="string">
-  Browser continuity identifier from the Era Web SDK.
+  Visitor ID from the Web or Flutter SDK. It can also be set on the client.
 </ParamField>
 
 <ParamField path="options.partnerEndUserId" type="string">
-  Your stable identifier for an authenticated user. Supply it only from a trusted backend.
+  Your stable ID for a signed-in user.
 </ParamField>
 
 <ParamField path="options.email" type="string">
-  Trusted email bridge assertion. Requires `partnerEndUserId`.
+  A backend-verified email address. Requires `partnerEndUserId`.
 </ParamField>
 
 <ParamField path="options.phone" type="string">
-  Trusted phone bridge assertion. Requires `partnerEndUserId`.
+  A backend-verified phone number. Requires `partnerEndUserId`.
 </ParamField>
 
 <ParamField path="options.sessionId" type="string">
-  Stable identifier for this conversation. It overrides the constructor default. If neither is present, the SDK derives a deterministic ID from the first user message.
+  Your stable ID for this conversation.
 </ParamField>
 
-Pass at least `visitorId` or `partnerEndUserId`. If neither is available, the SDK returns `""` without making an Era request.
+`visitorId` must be available on the call or client. `partnerEndUserId` is
+optional and does not replace it.
 
-### Returns
+### Result
 
-`Promise<string>` containing the cognitive context block to inject into your system prompt.
-
-The method returns `""` when:
-
-- The last normalized message is not from the user.
-- Neither `visitorId` nor `partnerEndUserId` is available.
-- An expected network, timeout, or Era API failure occurs after retries.
-
-Expected service failures fail open. Programming errors outside those paths can still reject. See [Fail-open design](/concepts/fail-open).
-
-### Usage
+The promise resolves to a plain string. Add it to your system prompt:
 
 ```typescript
-const block = await era.turnContext(messages, {
+const eraContext = await era.turnContext(messages, {
   visitorId,
   partnerEndUserId: authenticatedUser.id,
   sessionId,
 });
 
-if (block) {
-  systemPrompt += "\n\n" + block;
+if (eraContext) {
+  systemPrompt += `\n\n${eraContext}`;
 }
 ```
 
-### Memoization
+It resolves to `""` without making a request when:
 
-The latest result is keyed by all identity assertions, `sessionId`, and the current one-based `turn_index`. Repeated calls with the same latest turn can share one request without reusing a block under a different identity. See [Identity and session management](/concepts/sessions#identity-aware-memoization).
+- No `visitorId` is available.
+- The normalized conversation is empty.
+- The last normalized message is not from the user.
 
----
+Expected network, timeout, and API failures also resolve to `""`. See
+[Fail-open design](/concepts/fail-open).
 
-## Request format
+## HTTP request
 
-Under the hood, `turnContext()` sends `POST {baseUrl}/v1/era/turn`:
-
-```json
-{
-  "partner_id": "your_partner_id",
-  "visitor_id": "era_vid_00000000-0000-4000-8000-000000000000",
-  "partner_end_user_id": "customer-user-123",
-  "email": "person@example.com",
-  "session_id": "session_xyz",
-  "mode": "async",
-  "brand_voice": "concise and direct",
-  "turns": [
-    { "role": "user", "turn_index": 1, "text": "Hello" },
-    { "role": "assistant", "turn_index": 2, "text": "Hi! How can I help?" },
-    { "role": "user", "turn_index": 3, "text": "What are your prices?" }
-  ]
-}
+```text
+POST {baseUrl}/v1/era/turn
+X-API-Key: {apiKey}
+Content-Type: application/json
 ```
 
-Authentication uses the secret `X-API-Key` request header. Keep this key on your trusted backend.
+The SDK normalizes `messages` into user and assistant turns, adds identity and
+session values, and sends the request for you.
+
+## Repeated calls
+
+The latest result is memoized by identity, session, and turn number. Repeated
+calls for the same latest turn can share one HTTP request.
