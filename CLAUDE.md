@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Documentation site for the **Era SDK** (`@season/era-sdk`), built on [Mintlify](https://mintlify.com). Era is a "cognitive context" service: agents call `era.turnContext(messages)` each turn, get back a text block describing the user's intent/goal/emotion, and append it to the system prompt. There is no application code here — only MDX content and site configuration.
+Documentation site for the **Era SDK** (`@seasonlabs/era-node`), built on [Mintlify](https://mintlify.com). Era is a "cognitive context" service: agents call `era.turnContext(messages)` each turn, get back a text block describing the user's intent/goal/emotion, and append it to the system prompt. There is no application code here — only MDX content and site configuration.
 
 ## Commands
 

@@ -9,13 +9,13 @@ the conversation to Era with the Node SDK.
 <Steps>
   <Step title="Install">
     ```bash
-    npm install @season/era-web
+    npm install @seasonlabs/era-web
     ```
   </Step>
 
   <Step title="Create the browser client">
     ```typescript
-    import { EraWeb } from "@season/era-web";
+    import { EraWeb } from "@seasonlabs/era-web";
 
     const eraWeb = new EraWeb({
       baseUrl: "https://your-era-endpoint.com",
@@ -60,19 +60,10 @@ Treat `visitorId` as a continuity ID, not as proof that the user is signed in.
 
 ## Use a CDN
 
-Pin a package version:
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/@season/era-web@VERSION/dist/index.global.min.js"></script>
-<script>
-  const eraWeb = new EraWebSDK.EraWeb({
-    baseUrl: "https://your-era-endpoint.com",
-    publishableKey: "your_publishable_key",
-  });
-
-  eraWeb.init().then((visitorId) => console.log(visitorId));
-</script>
-```
+<Note>
+CDN distribution is coming soon. For now, install `@seasonlabs/era-web` from
+npm and use the package import shown above.
+</Note>
 
 ## Next steps
 

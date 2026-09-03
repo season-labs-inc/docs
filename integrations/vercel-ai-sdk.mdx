@@ -6,7 +6,7 @@ description: "Add Era context automatically before each Vercel AI SDK model call
 ## Install
 
 ```bash
-npm install @season/era-sdk ai
+npm install @seasonlabs/era-node ai
 ```
 
 ## `withEra`
@@ -15,8 +15,8 @@ Use `withEra()` for the simplest integration:
 
 ```typescript
 import { anthropic } from "@ai-sdk/anthropic";
-import { Era } from "@season/era-sdk";
-import { withEra } from "@season/era-sdk/ai-sdk";
+import { Era } from "@seasonlabs/era-node";
+import { withEra } from "@seasonlabs/era-node/ai-sdk";
 import { streamText } from "ai";
 
 const era = new Era({
@@ -49,7 +49,7 @@ Use `eraMiddleware()` when you need to compose multiple middleware:
 
 ```typescript
 import { wrapLanguageModel } from "ai";
-import { eraMiddleware } from "@season/era-sdk/ai-sdk";
+import { eraMiddleware } from "@seasonlabs/era-node/ai-sdk";
 
 const model = wrapLanguageModel({
   model: anthropic("claude-sonnet-4-6"),
