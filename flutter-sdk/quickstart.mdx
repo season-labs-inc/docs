@@ -17,6 +17,7 @@ the conversation to Era with the Node SDK.
     ```yaml
     dependencies:
       era_flutter: ^0.1.0
+      http: ^1.5.0
     ```
   </Step>
 
@@ -43,17 +44,26 @@ the conversation to Era with the Node SDK.
   </Step>
 
   <Step title="Send the visitor to your backend">
-    Include `visitorId` with every chat request. Your trusted backend passes it
-    to the Node SDK:
+    ```dart
+    import 'dart:convert';
 
-    ```typescript
-    const eraContext = await era.turnContext(messages, {
-      visitorId,
-      sessionId,
-    });
+    import 'package:http/http.dart' as http;
+
+    await http.post(
+      Uri.parse('https://your-app.example.com/api/chat'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'messages': messages,
+        'visitorId': visitorId,
+        'sessionId': sessionId,
+      }),
+    );
     ```
   </Step>
 </Steps>
+
+For the server-side integration flow, see the
+[Node SDK quickstart](/quickstart).
 
 ## Verify email or phone
 
